@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en" ng-app="hex">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Hex editor for EEPROM dump editing. Main purpose of this application is editing and analyzing small binary files, mostly eeprom dumps.
+    You can open, save, compare, analyse, decode binary data.">
+    <meta name="keywords" content="hex editor compare dump eeprom automotive">
+    <title>Online Hex editor tool</title>
+    <!--<link href="//fonts.googleapis.com/css?family=Droid+Sans Mono:400" rel="stylesheet" type="text/css">-->
+    <!--<link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:500' rel='stylesheet' type='text/css'>-->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="../material/css/ripples.min.css" rel="stylesheet">
+    <link href="../material/css/material-wfont.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/tree.css" />
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="fragment" content="!">
+    <link rel=”alternate” hreflang="en" href="http://hex-works.com/eng" />
+    <link rel=”alternate” hreflang="ru" href="http://hex-works.com/rus" />
+    <meta name="msvalidate.01" content="13C83813E5190CE939564B8FB4C9A99D" />
+
+    <base href="/">
+
+</head>
+<body ng-controller="main" ng-cloak>
+
+<div id="fb-root"></div>
+<script>
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId      : '656756204436636',
+            xfbml      : true,
+            version    : 'v2.2'
+        });
+    };
+
+    (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "//connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+</script>
+
+
+<!-- Modal -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h1 class="modal-title" id="myModalLabel">{{locale.helpheading}}</h1>
+            </div>
+            <div class="modal-body">
+                <ng-view></ng-view>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade modal-narrow" id="xorModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">{{dialogtitle}}</h4>
+            </div>
+            <div class="modal-body">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-addon">HEX Value</span>
+                    <input type="text" class="form-control rightinput" ng-model="dialog.value">
+                </div>
+                <p class="modalSub">{{dialogdestination}}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" ng-click="dlgFinish();">OK</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Modal -->
+<div class="modal fade modal-narrow" id="clipboard_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div id="modal_clip_confirm" class="modal-body clip_button" data-clipboard-text="Default hex" title="Copy current selection to clipboard">
+                <img src="/img/clipboard.png" class="center-block">
+                <h1 class="text-center" >Copy selection to OS clipboard?</h1>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade modal-narrow" id="clipboard_paste_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div id="modal_paste_confirm" class="modal-body clip_button" data-clipboard-text="Default hex" title="Copy current selection to clipboard">
+                <img src="/img/clipboard.png" class="center-block">
+                <h1 class="text-center">For paste press Ctrl-V (Cmd-V)</h1>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<nav class="navbar navbar-inverse navbar-default nav-padless shadow-z-2" role="navigation">
+
+    <div>
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="" onclick="$('.calclist').toggle();$('.calclist-backdrop').toggle();">Scripts</a>
+        </div>
+
+        <div id="navbar" class="collapse navbar-collapse">
+
+            <ul class="nav navbar-nav">
+
+                <li>
+                    <a href="javascript:;" title="Upload file from local computer">
+                    <label class="uploadfile">
+                        <span class="mdi-action-backup white" aria-hidden="true"></span>
+                        <file></file>{{locale.open}}
+                    </label>
+                    </a>
+                </li>
+                <li>
+                    <a href="" ng-click="saveFile()" title="Save file to local disk">
+                        <span class="mdi-file-cloud-download white" aria-hidden="true"></span>&nbsp {{locale.save}}</a>
+                </li>
+                <li>
+                    <a id="navbar_copy" class="clip_button" data-clipboard-text="Copy22 Me!" title="Copy current buffer to clipboard entirely">
+                        <span class="mdi-content-content-copy white" aria-hidden="true"></span>
+                        {{locale.copyclip}}<span class="foontpeek">.</span>
+                    </a>
+                </li>
+                <li><a href="" onclick="$('#myModal').modal()">
+                    <span class="mdi-action-info-outline white" aria-hidden="true"></span>&nbsp
+                    {{locale.information}}</a></li>
+
+
+            </ul>
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li ng-class="{redbg: lang === 'eng'}"><a href="/eng" ng-click="forceLang('eng')">ENG</a><li>
+                    <li ng-class="{redbg: lang === 'rus'}"><a href="/rus" ng-click="forceLang('rus')">RUS</a><li>
+                </ul>
+
+
+        </div><!--/.nav-collapse -->
+    </div>
+    <ul class="nav nav-tabs" role="tablist">
+        <li ng-repeat="tabi in tabs" role="presentation" ng-class="{active: $index==0}" title="{{tabi.name}}" data-toggle="context" data-target="#context-tab">
+
+            <a href="#hex" id="hextab{{$index}}"
+               aria-controls="hex{{$index}}"
+               role="tab" data-toggle="tab"
+               ng-click="changeTab($index);" class="wrap_text_a" alt="{{tabi.name}}">
+                <span ng-if="tabi.uuid === mastertab">*</span>
+                {{tabi.name}}
+
+            </a>
+            <button class="close closeTab" type="button" ng-click="killTab($index)">×</button>
+        </li>
+    </ul>
+</nav>
+<div class="bodycont container">
+    <div class="calclist-backdrop"></div>
+    <div class="calclist sidebar shadow-z-2" >
+
+        <div class="css-treeview"></div>
+    </div>
+
+
+    <div role="tabpanel" class="tabset">
+
+
+        <div class="tab-content well" >
+            <div class="saved successfully-saved hide-opacity">Saved</div>
+
+            <div role="tabpanel" class="tab-pane active" id="hex">
+              <!--  <div class="subcontainter">-->
+                <!--<div class="scrollbar"></div>-->
+
+                    <div class="container_hex noselect" data-toggle="context" data-target="#context-editor"  nv-file-drop="" uploader="uploader">
+                        <div class="colorbar">
+                            <span class="colorbox whitebg shadow-z-2" ng-click="markWithColor('whitebg');"></span>
+                            <span class="colorbox redbg shadow-z-2" ng-click="markWithColor('redbg');"></span>
+                            <span class="colorbox greenbg shadow-z-2" ng-click="markWithColor('greenbg');"></span>
+                            <span class="colorbox yellowbg shadow-z-2" ng-click="markWithColor('yellowbg');"></span>
+                            <span class="colorbox bluebg shadow-z-2" ng-click="markWithColor('bluebg');"></span>
+                            <span class="colorbox purplebg shadow-z-2" ng-click="markWithColor('purplebg');"></span>
+                            <span class="colorbox violetbg shadow-z-2" ng-click="markWithColor('violetbg');"></span>
+                            <span class="colorbox greybg shadow-z-2" ng-click="markWithColor('greybg');"></span>
+                            <span class="applyall">
+                                <input type="checkbox" ng-model="flags.mastertab" ng-change="changeMasterFlag()">
+                                <label>{{locale.apply}}</label>
+                            </span>
+                        </div>
+                        <hex-view></hex-view>
+                    </div>
+            </div>
+        </div> <!-- tab content-->
+    </div>
+
+    <div class="inspector">
+
+
+            <div class="calc well"  is-open="1">
+                <a data-toggle="collapse" aria-expanded="false" aria-controls="details" href="#details">
+                <h3>{{locale.inspector}} {{inspheader}}</h3>
+                </a>
+                <div id="details" class="collapse in">
+
+                    <div class="label label-info miniheading">{{locale.normalorder}}</div>
+                    <div class="input-group input-group-sm miniinput"  tooltip="Raw hex value. Expression variable 'hex' " tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('hex');">HEX</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.value_hex" ng-change="encodeValueHex(inspector.value_hex);" ng-class="{red: inspector.value_hex_error==true}">
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="Inverted hex value. Expression variable 'hex_inv'" tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('hex_inv');">!HEX</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.value_hex_inv" ng-change="encodeValueHexInv(inspector.value_hex_inv);" ng-class="{red: inspector.value_hex_inv_error==true}">
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="Raw decimal value representation. Expression variable 'dec'" tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('dec');">DEC</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.value" ng-change="encodeValue(inspector.value);" ng-class="{red: inspector.value_error==true}">
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="Inverted decimal value representation. Expression variable 'dec_inv'" tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('dec_inv');">!DEC</span>
+                        <input type="text" class="form-control  rightinput" ng-model="inspector.vinv" ng-change="encodeVinv(inspector.vinv);" ng-class="{red: inspector.vinv_error==true}">
+                    </div>
+
+                    <div class="label label-info miniheading">{{locale.reverseorder}}</div>
+                    <div class="input-group input-group-sm miniinput" tooltip="Raw hex value in reverse byte order. Expression variable 'rhex' " tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('rhex');">HEX</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.bvalue_hex" ng-change="encodeBValueHex(inspector.bvalue_hex);" ng-class="{red: inspector.bvalue_hex_error==true}">
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="Inverted hex value in reverse byte order. Expression variable 'rhex_inv'" tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('rhex_inv')">!HEX</span>
+                        <input type="text" class="form-control  rightinput" ng-model="inspector.bvalue_hex_inv" ng-change="encodeBValueHexInv(inspector.bvalue_hex_inv);" ng-class="{red: inspector.bvalue_hex_inv_error==true}">
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="Raw decimal value in reverse byte order. Expression variable 'rdec'" tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('rdec');">DEC</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.bvalue" ng-change="encodeBValue(inspector.bvalue);" ng-class="{red: inspector.bvalue_error==true}">
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="Inverted decimal value in reverse order. Expression variable 'rdec_inv'" tooltip-popup-delay="500">
+                        <span class="input-group-addon" ng-click="selectVar('rdec_inv');">!DEC</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.bvinv" ng-change="encodeBVinv(inspector.bvinv);" ng-class="{red: inspector.bvinv_error==true}">
+                    </div>
+                    <div class="label label-info miniheading">{{locale.checksum}}</div>
+                    <div class="input-group input-group-sm miniinput" tooltip="8bit sum of all selected bytes. Truncated at 8 bits" tooltip-popup-delay="500">
+                        <span class="input-group-addon">SUM</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.sum" readonly>
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="8bit xor checksum. Every byte is XORed with predcessor" tooltip-popup-delay="500">
+                        <span class="input-group-addon">XOR</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.sumxor" readonly>
+                    </div>
+                    <div class="input-group input-group-sm miniinput" tooltip="16bit sum of all selected bytes. Truncated at 8 bits" tooltip-popup-delay="500">
+                        <span class="input-group-addon">SUM16</span>
+                        <input type="text" class="form-control rightinput" ng-model="inspector.sum16" readonly>
+                    </div>
+
+
+                    <div style="margin-top:10px;float:left;width: 100%;">
+                        <div class="input-group input-group-sm" tooltip="Enter expression to evaluate here. You can use math operations + - / * (), access current selection as array: sel[0], sel[1] etc, or enter inspector variable" tooltip-popup-delay="500">
+                            <span class="input-group-addon">EXPR:</span>
+                            <input type="text" class="form-control" ng-model="inspector.script" ng-change="compileScript(inspector.script);">
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-addon">VALUE:</span>
+                            <input type="text" class="form-control" ng-model="inspector.scriptresult" readonly>
+                        </div>
+                    </div>
+
+
+
+                </div>
+
+            </div>
+
+            <div  class="calc well" heading="Script" is-open="1">
+                <h3>Script {{scriptname}}</h3>
+                <img src="../img/loader.gif" class="calc_busy" style="display:none;position: absolute;">
+                <div ng-if="calc_error" class="red"><pre>{{calc_error}}</pre></div>
+                <div id="calc_form"></div>
+                <div ng-if="calc_ready">
+                    <button class='btn btn-lg btn-primary' id='calculate' ng-click="readScript();"> Read </button>
+                    <button class='btn btn-lg btn-primary' id='apply' ng-click="writeScript()"> Write </button>
+                </div>
+
+            </div>
+
+
+
+    </div>
+
+
+</div>
+    <div class="footer"><span id="MeasureFont">
+    </span>{{locale.current}}:0x{{buffer.current.toString(16)}} {{locale.of}} 0x{{buffer.length().toString(16)}} ({{buffer.current}} {{locale.of}} {{buffer.length()}})
+    <span class="social">
+        <!--<div class="fb-share-button" data-href="https://hex-works.com" data-layout="button_count"></div>-->
+        <div class="fb-like" data-href="https://hex-works.com" data-layout="button_count" data-action="like" data-show-faces="true" data-share="true"></div>
+        <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://hex-works.com" data-via="hex_works" data-related="hex_works">Tweet</a>
+        <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+        <script src="https://apis.google.com/js/platform.js" async defer>
+            {lang: 'ru'}
+        </script>
+
+
+        <div class="g-plusone" data-size="small" data-href="http://hex-works.com"></div>
+            </span>
+        </div>
+    <textarea></textarea>
+
+
+<div id="context-tab">
+    <ul class="dropdown-menu" role="menu">
+        <li><a tabindex="-1" href="#">Change buffer size</a></li>
+        <li class="divider"></li>
+        <li ng-repeat="tabi in tabs"><a tabindex="-1" href="#" ng-click="compareToTab(tabi)">Compare to {{tabi.name}}</a></li>
+    </ul>
+</div>
+<div id="context-editor">
+    <ul class="dropdown-menu" role="menu">
+        <li><a tabindex="-1" href="#" ng-click="clearMarkers()">Clear markers</a></li>
+        <li><a tabindex="-1" href="#" ng-click="swapBytes()">Swap bytes</a></li>
+        <li><a tabindex="-1" href="#" ng-click="xorDialog();">XOR...</a></li>
+        <li><a tabindex="-1" href="#" ng-click="fillDialog();">FILL...</a></li>
+        <li class="divider"></li>
+        <li><a class="clip_button" id="context_copy" data-clipboard-text="Context copy" tabindex="-1" href="#">Copy</a></li>
+        <li><a tabindex="-1" href="#" ng-click="cmdPaste();">Paste...</a></li>
+        <li><a tabindex="-1" href="#" ng-click="selectAll();">Select All</a></li>
+    </ul>
+</div>
+
+<script src="/lib/modernizr.js"></script>
+<script>
+    if (!(Modernizr.canvas && Modernizr.canvastext)) {
+        alert("Your browser is outdated, update to Google Chrome, firefox");
+    }
+    if (!Modernizr.csscalc) {
+       // alert("No css calc support");
+        function emulate_calc() {
+            $('.bodycont').css('height', '100%').css('height', '-=134px');
+
+            $('.calc').css('width', '100%').css('width', '-=20px');
+            $('.inspector').css('height', '100%').css('height', '-=20px');
+            $('.tab-content').css('height', '100%').css('height', '-=20px');
+            $('.hexdirective').css('height', '100%').css('height', '-=40px');
+
+            $('.calclist').css('height', '100%').css('width', '-=135px');
+            $('.calclist-backdrop').css('height', '100%').css('width', '-=135px');
+
+
+
+
+            //$('.bodycont').css('height', '100%').css('height', '-=134px');
+        }
+    } else {
+        emulate_calc = function () {};
+
+    }
+</script>
+
+
+
+<script src="//ajax.googleapis.com/ajax/libs/webfont/1.5.10/webfont.js"></script>
+<script>
+    function rdyfont() {
+        console.log("Font loaded");
+        font_loaded_ok = true;
+        if (font_load_callback) {
+            font_load_callback();
+        }
+    }
+    font_load_callback = false;
+    WebFont.load({
+        google: {
+            families: ['Source Code Pro:500']
+        },
+        active: rdyfont,
+        inactive: function () {
+            console.log("Cant load font....");
+            setTimeout(rdyfont,1000);
+        }
+    });
+</script>
+
+
+
+    <script src="/lib/FileSaver.min.js"></script>
+    <script src="/lib/jdataview.js"></script>
+    <script src="/lib/jquery-2.1.3.min.js"></script>
+    <script src="/lib/jquery.mousewheel.js"></script>
+    <script src="/lib/bootstrap.min.js"></script>
+    <script src="/lib/bootstrap-contextmenu.js"></script>
+    <script src="/material/js/ripples.min.js"></script>
+    <script src="/material/js/material.min.js"></script>
+    <script src="/lib/jbinary.js"></script>
+    <script src="/lib/angular.min.js"></script>
+    <script src="/lib/angular-route.min.js"></script>
+    <script src="/lib/hammer.min.js"></script>
+
+    <script src="/lib/ui-bootstrap-tpls-0.12.0.js"></script>
+    <script src="/lib/angular-seo.js"></script>
+    <script src='/lib/scalyr.js'></script>
+    <script type="text/javascript" src="../lib/ZeroClipboard.js"></script>
+
+    <script src="/lib/localforage.js"></script>
+    <script src="https://cdn.socket.io/socket.io-1.3.2.js"></script>
+
+
+<!--(if target dev)><!-->
+    <script src="../js/locale.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/binbuf.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/controllers.js"></script>
+    <script src="/js/services.js"></script>
+    <script src="/js/directives.js"></script>
+    <script src="/js/hexview.js"></script>
+    <script src="/js/formcontrols.js"></script>
+
+
+<script>
+    $(document).ready(function () {
+       emulate_calc();
+        $('.calclist-backdrop').click(function () {
+            $('.calclist-backdrop').hide();
+            $('.calclist').hide();
+
+        })
+    });
+</script>
+
+<!--<!(endif)-->
+
+<!--(if target dist)>
+    <script src="js/all.js"></script>
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-38352464-2', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+<script type="text/javascript">
+(function (d, w, c) {
+    (w[c] = w[c] || []).push(function() {
+        try {
+            w.yaCounter27922626 = new Ya.Metrika({id:27922626});
+        } catch(e) { }
+    });
+
+    var n = d.getElementsByTagName("script")[0],
+        s = d.createElement("script"),
+        f = function () { n.parentNode.insertBefore(s, n); };
+    s.type = "text/javascript";
+    s.async = true;
+    s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js";
+
+    if (w.opera == "[object Opera]") {
+        d.addEventListener("DOMContentLoaded", f, false);
+    } else { f(); }
+})(document, window, "yandex_metrika_callbacks");
+</script>
+<noscript><div><img src="//mc.yandex.ru/watch/27922626" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+
+<!(endif)-->
+
+<!-- begin of Top100 code -->
+
+<script id="top100Counter" type="text/javascript" src="http://counter.rambler.ru/top100.jcn?3084882"></script>
+<noscript>
+    <img src="http://counter.rambler.ru/top100.cnt?3084882" alt="" width="1" height="1" border="0" />
+
+</noscript>
+<!-- end of Top100 code -->
+
+</body>
+</html>
