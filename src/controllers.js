@@ -1,3 +1,9 @@
+import angular from 'angular'
+import angular_route from 'angular-route'
+import uibootstrap from 'angular-ui-bootstrap'
+
+import {englocale,ruslocale} from './locale'
+
 
 var keys = {
     PAGEDN: 34,
@@ -16,7 +22,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     console.log("root");
 
     var path = $location.path();
-    $scope.lang = "eng"
+    $scope.lang = "eng";
     $scope.locale = englocale;
 
 
@@ -64,12 +70,12 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
     $scope.calc_busy = false;
     $scope.calc_error = "";
-    $scope.calc_form = ""
+    $scope.calc_form = "";
     $scope.calc_ready = false;
 
     $scope.dialogtitle = "";
     $scope.dialogdestination = "";
-    $scope.scriptname = ""
+    $scope.scriptname = "";
 
     $scope.calculators = [];
 
@@ -250,7 +256,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
 
 
-    }
+    };
 
     function openFile(data,name) { // open file to current tab
 
@@ -261,7 +267,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
         var buffer = new BinBuf(0);
         var rv;
-        console.log(typeof data)
+        console.log(typeof data);
         if (typeof data.data === "undefined") {
             rv = buffer.loadDataFromFile(data)
         } else {
@@ -771,7 +777,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
             $scope.inspector.bvalue_hex_inv_error = true;
 
         };
-    }
+    };
 
 
 
@@ -845,17 +851,17 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
         $scope.inspector.value_hex_error = $scope.inspector.value_hex_inv_error =  $scope.inspector.value_error =  $scope.inspector.vinv_error = $scope.inspector.bvalue_hex_error =   $scope.inspector.bvalue_hex_inv_error =   $scope.inspector.bvalue_error =  $scope.inspector.bvinv_error = ""
         $scope.compileScript($scope.inspector.script);
 
-    }
+    };
 
     $scope.clearInspector = function () {
         $scope.inspector.value_hex = $scope.inspector.value_hex_inv =  $scope.inspector.value =  $scope.inspector.vinv = $scope.inspector.bvalue_hex =   $scope.inspector.bvalue_hex_inv =   $scope.inspector.bvalue =  $scope.inspector.bvinv = ""
         $scope.inspector.value_hex_error = $scope.inspector.value_hex_inv_error =  $scope.inspector.value_error =  $scope.inspector.vinv_error = $scope.inspector.bvalue_hex_error =   $scope.inspector.bvalue_hex_inv_error =   $scope.inspector.bvalue_error =  $scope.inspector.bvinv_error = ""
 
-        $scope.inspector.sum = ""
-        $scope.inspector.sumxor =""
-        $scope.inspheader=""
+        $scope.inspector.sum = "";
+        $scope.inspector.sumxor ="";
+        $scope.inspheader="";
         $scope.$apply();
-    }
+    };
 
     $scope.compileScript = function (script) {
         console.log("Compiling script");
@@ -875,11 +881,11 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
 
         $scope.runUserScript()
-    }
+    };
     $scope.selectVar = function (v) {
         $scope.inspector.script = v;
         $scope.compileScript($scope.inspector.script);
-    }
+    };
 
     $scope.runUserScript = function () {
         if (!$scope.inspector.scriptingerror) {
@@ -888,20 +894,20 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
         } else {
             $scope.inspector.scriptresult = "Error";
         }
-    }
+    };
 
 
 
     var dlgcallback = function () {};
     $scope.dialog = {
         "value": "00"
-    }
+    };
 
     $scope.dlgFinish = function () {
         dlgcallback();
         $("#xorModal").modal('hide');
         $scope.render++;
-    }
+    };
 
     $scope.openDialog = function (title, destination, cb) {
         dlgcallback = cb;
@@ -927,7 +933,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
             $scope.buffer.fillWithSequence(start,end,stringToByteSeq($scope.dialog.value),true);
         });
 
-    }
+    };
     $scope.fillDialog = function () {
 
         var seltext = hasSelection()?"current selection":"entire buffer";
@@ -953,7 +959,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
 };
 
-var app =  angular.module('hex', ['ui.bootstrap','seo','ngRoute']); // ngRoute
+var app =  angular.module('hex', [uibootstrap,angular_route]); // ngRoute
 
 
 app.config(function ($routeProvider,$locationProvider) {
@@ -967,3 +973,5 @@ app.config(function ($routeProvider,$locationProvider) {
 
 
 app.controller('main', ['$scope','$http','scripting',"$sce","$location", MainCtrl]); // $location
+
+export default app;

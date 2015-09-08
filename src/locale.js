@@ -1,4 +1,4 @@
-var englocale = {
+export const englocale = {
     open: "Open",
     save: "Save",
     copyclip: "CopyToClipboard",
@@ -12,7 +12,7 @@ var englocale = {
     apply: "Apply this colorset to all tabs",
     compare: "Compare to"
 };
-var ruslocale = {
+export const ruslocale = {
     open: "Открыть",
     save: "Сохранить",
     copyclip: "Скопировать",
@@ -26,3 +26,4 @@ var ruslocale = {
     apply: "Применить цветовую схему ко всем табам",
     compare: "Сравнить с"
 };
+

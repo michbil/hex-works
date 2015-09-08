@@ -1,4 +1,4 @@
-angular.module('hex').directive('file', function() {
+export default angular.module('hex').directive('file', function() {
 
     return {
         template: '<input style="display: none" type="file" multiple/>',

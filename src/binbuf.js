@@ -284,7 +284,6 @@ BinBuf.prototype = {
     }
 
 
-}
-/**
- * Created by mich.bil on 14.01.15.
- */
+};
+
+export default BinBuf;
