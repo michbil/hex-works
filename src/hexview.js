@@ -403,7 +403,7 @@ angular.module('hex').directive('hexView', function () {
 
             offscreen_context.font = "15px Source Code Pro";
             cursorctx.font = "15px Source Code Pro";
-            ctx.font = "15px Source Code Pro"
+            ctx.font = "15px Source Code Pro";
             ctx.textBaseline = "bottom";
             cursorctx.textBaseline= "bottom";
             cursorctx.globalAlpha = 0.5;
@@ -835,9 +835,6 @@ angular.module('hex').directive('hexView', function () {
                 scope.buffer.offset = scrollmax;
             }
 
-
-
-
             if (scope.buffer.offset < 0) {  // prevent hard faults
                 scope.buffer.offset = 0;
             }
@@ -851,7 +848,7 @@ angular.module('hex').directive('hexView', function () {
         }
     }
 
-    var scrollOffset=-1;;
+    var scrollOffset=-1;
     var scrollbar_grip = false;
 
     function processGlobalMouseMove(e) {
@@ -860,7 +857,7 @@ angular.module('hex').directive('hexView', function () {
             var y = e.pageY - rootElement.offset().top;
 
             var offset = reverseScrollCompute(y+scrollOffset);
-            scope.buffer.offset = Math.round(offset)
+            scope.buffer.offset = Math.round(offset);
             renderDOM(scope,rootElement);
             return false;
 
@@ -947,17 +944,17 @@ angular.module('hex').directive('hexView', function () {
                 console.log("focused");
                 focused = true;
                 render_cursor();
-            })
+            });
             $(element).on('blur',function () {
                 console.log("lost focus");
                 focused = false;
                 render_cursor();
 
-            })
+            });
 
             var options = {
                 preventDefault: true
-            }
+            };
             var hammer = new Hammer(element[0],options);
 
 
@@ -978,12 +975,6 @@ angular.module('hex').directive('hexView', function () {
             cursorctx.textBaseline= "bottom";
 
 
-
-            //var metrics = cursorctx.measureText(s);
-
-
-
-
             console.log(scope_param.$id);
             adresscolumn = element.find('#adresscolumn').get(0);
             hexes = element.find('#hexcolumn').get(0);
@@ -999,7 +990,7 @@ angular.module('hex').directive('hexView', function () {
 
             scope.$watch("ready",function () {
 
-                resize(element)
+                resize(element);
                 renderDOM(scope,element);
 
             });
