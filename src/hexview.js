@@ -1038,7 +1038,7 @@ angular.module('hex').directive('hexView', function () {
 
             $(window).resize(function () {
                 resized = 1;
-                emulate_calc();
+                window.emulate_calc();
 //                resize(element);
                 renderDOM(scope,element);
                 manageCSS();
@@ -1058,29 +1058,29 @@ angular.module('hex').directive('hexView', function () {
                 opacity: 0
             }).bind("paste", function (data) {
                 data = data.originalEvent.clipboardData || $window.clipboardData;
-                var text = data.getData('Text')
+                var text = data.getData('Text');
                 console.log(text)
-                scope.buffer.current+=scope.buffer.pasteSequence(text,scope.buffer.current)
+                scope.buffer.current+=scope.buffer.pasteSequence(text,scope.buffer.current);
                 render();
                 scope.$apply();
             });
 
 
             element.on('mouseup', function(e) {
-                var index = processPointer(e,"up")
+                var index = processPointer(e,"up");
                 if (typeof index !== "undefined") setCurrent(e,index,"up")
 
 
             });
             element.on('mousedown', function(e) {
-                var index = processPointer(e,'down')
+                var index = processPointer(e,'down');
                 if (typeof index !== "undefined") setCurrent(e,index,"down")
 
 
             });
             element.on('mousemove', function(e) {
               //  console.log("over");
-                var index = processPointer(e,'move')
+                var index = processPointer(e,'move');
                 if (typeof index !== "undefined") mouseHover(index)
 
             });
