@@ -9,7 +9,7 @@ if (!(Modernizr.canvas && Modernizr.canvastext)) {
 }
 if (!Modernizr.csscalc) {
     // alert("No css calc support");
-    function emulate_calc() {
+    window.emulate_calc = function () {
         $('.bodycont').css('height', '100%').css('height', '-=134px');
 
         $('.calc').css('width', '100%').css('width', '-=20px');

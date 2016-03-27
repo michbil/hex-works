@@ -152,7 +152,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
     $scope.searchText = function (text) {
         console.log(text);
-    }
+    };
 
     $scope.openTab = function(data,name,norender) {
 
@@ -531,7 +531,8 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     };
     $scope.readScript = function () {
         $scope.calculate($scope.calcname);
-    }
+    };
+
     $scope.writeScript = function () {
         var values = extract_from_form(scriptVariables);
         $('.calc_busy').show();
@@ -574,10 +575,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
     extendwithdevelopment($scope,scripting);
 
-
     var timeout = null;
-
-
 
     $scope.markWithColor = function (color) {
         console.log(color)

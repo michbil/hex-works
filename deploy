@@ -1,0 +1,5 @@
+ssh root@hex-works.com <<'ENDSSH'
+cd /var/www/hex-works
+git pull
+gulp
+ENDSSH
