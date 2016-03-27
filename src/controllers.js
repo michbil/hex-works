@@ -1,18 +1,11 @@
 import angular from 'angular'
 import angular_route from 'angular-route'
 import uibootstrap from 'angular-ui-bootstrap'
-
+import BinBuf from './binbuf.js'
 import {englocale,ruslocale} from './locale'
+import keys from './keys.js'
 
 
-var keys = {
-    PAGEDN: 34,
-    PAGEUP: 33,
-    LEFT: 37,
-    UP: 38,
-    RIGHT: 39,
-    DOWN: 40
-};
 
 var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     'use strict';
@@ -328,7 +321,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
                         count--;
                         if (count == 0) {
                             $scope.busy = 0;
-                            $scope.htmlReady();
+                           // $scope.htmlReady();
                             $scope.render++;
                             $scope.$apply()
 
@@ -355,9 +348,9 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     $scope.calculators  = {};
     $scope.loadFromLS(function () { // try to reload tabs from localstorage, if not
         var buf = new BinBuf(4096);    // create default buffer if there is no localstorage
-        $scope.openTab(buf.saveToDict(),'unnamed')
+        $scope.openTab(buf.saveToDict(),'unnamed');
         $scope.busy=0;
-        $scope.htmlReady();
+//        $scope.htmlReady();
 
     });
 
@@ -973,5 +966,9 @@ app.config(function ($routeProvider,$locationProvider) {
 
 
 app.controller('main', ['$scope','$http','scripting',"$sce","$location", MainCtrl]); // $location
+
+app.service("scripting",['$http', function ($http) {
+    'use strict';
+}]);
 
 export default app;

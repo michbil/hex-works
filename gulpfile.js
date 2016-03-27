@@ -19,7 +19,7 @@ gulp.task('hex', function() {
         .pipe(browserify({
             debug:true
         }))
-        .pipe(uglify())
+      //  .pipe(uglify())
         .pipe(gulp.dest('./dist/'))
         .on('error', function(err) {
             console.log('Build error:', err.toString());

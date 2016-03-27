@@ -20,24 +20,22 @@ if (!Modernizr.csscalc) {
         $('.calclist').css('height', '100%').css('width', '-=135px');
         $('.calclist-backdrop').css('height', '100%').css('width', '-=135px');
 
-
-
-
         //$('.bodycont').css('height', '100%').css('height', '-=134px');
     }
 } else {
-    emulate_calc = function () {};
 
 }
 
+window.font_loaded_ok = false;
+
 function rdyfont() {
     console.log("Font loaded");
-    font_loaded_ok = true;
+    window.font_loaded_ok = true;
     if (font_load_callback) {
         font_load_callback();
     }
 }
-font_load_callback = false;
+window.font_load_callback = false;
 WebFont.load({
     google: {
         families: ['Source Code Pro:500']

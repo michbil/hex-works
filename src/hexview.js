@@ -2,6 +2,8 @@
  * Created by mich.bil on 21.01.15.
  */
 
+import keys from './keys.js'
+
 var is_Mac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 angular.module('hex').directive('hexView', function () {
@@ -367,12 +369,12 @@ angular.module('hex').directive('hexView', function () {
     function renderDOM(scope) {
 
 
-        if (typeof font_loaded_ok == "undefined") {
+        if (typeof window.font_loaded_ok == "undefined") {
             console.log("Waiting for font ...");
             ctx.fillStyle = "555";
             ctx.clearRect(0,0,300,30);
-            ctx.fillText(waittext,0,30);waittext += "."
-            font_load_callback = fontloadcallback;
+            ctx.fillText(waittext,0,30);waittext += ".";
+            window.font_load_callback = fontloadcallback;
 
             return;
         }

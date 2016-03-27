@@ -64,12 +64,12 @@ BinBuf.prototype = {
 
     saveToDict: function () {
         this.changed=0;
-        data =  {
+        var data =  {
             name:  this.getName(),
             colors:this.colors,
             data:  this.toBuffer(),
             uuid: this.uuid
-        }
+        };
         return data;
 
     },
