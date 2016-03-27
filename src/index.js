@@ -7,25 +7,19 @@ import fromcontrols from './formcontrols'
 if (!(Modernizr.canvas && Modernizr.canvastext)) {
     alert("Your browser is outdated, update to Google Chrome, firefox");
 }
-if (!Modernizr.csscalc) {
-    // alert("No css calc support");
-    window.emulate_calc = function () {
-        $('.bodycont').css('height', '100%').css('height', '-=134px');
+window.emulate_calc = function () {
+    $('.bodycont').css('height', '100%').css('height', '-=134px');
 
-        $('.calc').css('width', '100%').css('width', '-=20px');
-        $('.inspector').css('height', '100%').css('height', '-=20px');
-        $('.tab-content').css('height', '100%').css('height', '-=20px');
-        $('.hexdirective').css('height', '100%').css('height', '-=40px');
+    $('.calc').css('width', '100%').css('width', '-=20px');
+    $('.inspector').css('height', '100%').css('height', '-=20px');
+    $('.tab-content').css('height', '100%').css('height', '-=20px');
+    $('.hexdirective').css('height', '100%').css('height', '-=40px');
 
-        $('.calclist').css('height', '100%').css('width', '-=135px');
-        $('.calclist-backdrop').css('height', '100%').css('width', '-=135px');
+    $('.calclist').css('height', '100%').css('width', '-=135px');
+    $('.calclist-backdrop').css('height', '100%').css('width', '-=135px');
 
-        //$('.bodycont').css('height', '100%').css('height', '-=134px');
-    }
-} else {
-
-}
-
+    //$('.bodycont').css('height', '100%').css('height', '-=134px');
+};
 window.font_loaded_ok = false;
 
 function rdyfont() {
