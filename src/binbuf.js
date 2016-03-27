@@ -173,7 +173,7 @@ BinBuf.prototype = {
         data = data.replace(/[^0-9a-fA-F]/g,"")
         var bytelist = data.match(/.{1,2}/g);
         var n = 0;
-        for (i in bytelist) {
+        for (var i in bytelist) {
             this.setByte(pos++,parseInt(bytelist[i],16))
             n++;
         }
