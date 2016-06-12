@@ -29,5 +29,16 @@ gulp.task('hex', function() {
         })
 });
 
+gulp.task('generate-service-worker', function(callback) {
+    var path = require('path');
+    var swPrecache = require('sw-precache');
+    var rootDir = 'dist';
 
-gulp.task('default', ['copy','hex']);
+    swPrecache.write(path.join(rootDir, 'service-worker.js'), {
+        staticFileGlobs: [rootDir + '/**/*.{js,html,css,png,jpg,gif,svg,eot,ttf,woff}'],
+        stripPrefix: rootDir
+    }, callback);
+});
+
+
+gulp.task('default', ['copy','hex','generate-service-worker']);
