@@ -35,7 +35,7 @@ gulp.task('generate-service-worker', function(callback) {
     var rootDir = 'dist';
 
     swPrecache.write(path.join(rootDir, 'service-worker.js'), {
-        staticFileGlobs: [rootDir + '/**/*.{js,html,css,png,jpg,gif,svg,eot,ttf,woff}'],
+        staticFileGlobs: [rootDir + '/**/*.{js,html,css,png,jpg,gif,svg,eot,ttf,woff,swf,woff2}'],
         stripPrefix: rootDir
     }, callback);
 });
