@@ -9,6 +9,7 @@ import jBinary from 'jbinary';
 import localforage from 'localforage';
 import {toHex,toChar,alignToLength,hexInvert,hexEncode,reverseByteString,stringToByteSeq} from './utils.js'
 import {saveAs} from 'file-saver';
+import {compileScript} from './scripting.js';
 
 var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     'use strict';
@@ -348,7 +349,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     $scope.saveFile = function() {
         var blob = new Blob([$scope.buffer.buffer], {type: "application/octet-stream"});
         saveAs(blob, $scope.buffer.getName());
-    }
+    };
 
 
     $scope.calculators  = {};
@@ -846,7 +847,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
         //$scope.$apply();
         allSelected = allSelected.reverse();
         $scope.inspector.value_hex_error = $scope.inspector.value_hex_inv_error =  $scope.inspector.value_error =  $scope.inspector.vinv_error = $scope.inspector.bvalue_hex_error =   $scope.inspector.bvalue_hex_inv_error =   $scope.inspector.bvalue_error =  $scope.inspector.bvinv_error = ""
-        $scope.compileScript($scope.inspector.script);
+        $scope.evalScript($scope.inspector.script);
 
     };
 
@@ -860,14 +861,8 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
         $scope.$apply();
     };
 
-    $scope.compileScript = function (script) {
-        console.log("Compiling script");
-       // var buf = allSelected.map(function(v) {return $scope.buffer.getByte(v)});
-
-        var varprep = "var hex=$scope.inspector.value_hex; var dec=$scope.inspector.value;var dec_inv = $scope.inspector.vinv;   var hex_inv = $scope.inspector.value_hex_inv;        var rhex=$scope.inspector.bvalue_hex;        var rdec=$scope.inspector.bvalue;        var rdec_inv = $scope.inspector.bvinv;        var rhex_inv = $scope.inspector.bvalue_hex_inv;"
-        varprep += "var sel = allSelected.map(function(v) {return $scope.buffer.getByte(v)});\n"
-
-        var evalpat = "$scope.userscript = function() {\n"+ varprep   + "return "+ script +";\n}";
+    $scope.evalScript = function (script) {
+        const evalpat = compileScript(script);
         console.log(evalpat);
         try {
             eval(evalpat);
@@ -881,7 +876,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     };
     $scope.selectVar = function (v) {
         $scope.inspector.script = v;
-        $scope.compileScript($scope.inspector.script);
+        $scope.evalScript($scope.inspector.script);
     };
 
     $scope.runUserScript = function () {

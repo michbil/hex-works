@@ -23,7 +23,7 @@ angular.module('hex').directive('hexView', function () {
     var binoffset = 0;
 
     var offsetX = 0;
-    var offsetY = 0
+    var offsetY = 0;
     var scrollbarX = 680;
 
     var scrollbarpar;
@@ -43,7 +43,7 @@ angular.module('hex').directive('hexView', function () {
     var cellmarked = Array.apply(null, new Array(rows  * cols)).map(Boolean.prototype.valueOf, true);
     var cellcolor = Array.apply(null, new Array(rows  * cols)).map(Boolean.prototype.valueOf, true);
 
-    var rootElement=0
+    var rootElement=0;
    // var template = "<div class='hexdirective' tabindex='1' style=\"position: relative;height: calc(100% - 40px);\"><div class='scrollbar'></div> <div style=\"height:20px;margin-left: 71px;\"> <div class=\"view view-offset\"><\/div><div class=\"view view-hex adr\"> <span>00<\/span> <span>01<\/span> <span>02<\/span> <span>03<\/span> <span>04<\/span> <span>05<\/span> <span>06<\/span> <span>07<\/span> <span>08<\/span> <span>09<\/span> <span>0A<\/span> <span>0B<\/span> <span>0C<\/span> <span>0D<\/span> <span>0E<\/span> <span>0F<\/span> <\/div><div class=\"view view-char adr\"> <span>0<\/span><span>1<\/span><span>2<\/span><span>3<\/span><span>4<\/span><span>5<\/span><span>6<\/span><span>7<\/span><span>8<\/span><span>9<\/span> <span>A<\/span><span>B<\/span><span>C<\/span><span>D<\/span><span>E<\/span><span>F<\/span> <\/div><\/div><div id=\"adresscolumn\" class=\"view view-offset\"> <\/div><div id=\"hexcolumn\" class=\"view view-hex\"> <\/div><div id=\"bincolumn\" class=\"view view-char\"> <\/div><\/div>"
     var template = "<div class='hexdirective' tabindex='0'><canvas id='myCanvas' width='640px' height='320px'></canvas><canvas id='cursorCanvas' width='640px' height='320px'></canvas></div>"
     var selection_started = -1,selStart=-1,selEnd=-1;
@@ -368,7 +368,7 @@ angular.module('hex').directive('hexView', function () {
         renderDOM(scope);
     }
 
-    var waittext = "."
+    var waittext = ".";
     function renderDOM(scope) {
 
 
@@ -496,7 +496,7 @@ angular.module('hex').directive('hexView', function () {
 
                 }
 
-                var delimit = "  "
+                var delimit = "  ";
                 //if (use_spaces) delimit = " ";
 
                 blacklines.push(hexline+delimit+binline);
@@ -755,7 +755,7 @@ angular.module('hex').directive('hexView', function () {
     }
 
     function resize (element) {
-        console.log("resize")
+        console.log("resize");
         var ht = element.height();
         rows = Math.round(ht / 20) - 1;
         if (rows <= 0) {
@@ -1021,7 +1021,7 @@ angular.module('hex').directive('hexView', function () {
             $(window).resize(function () {
                 resized = 1;
                 window.emulate_calc();
-//                resize(element);
+                resize(element);
                 renderDOM(scope,element);
                 manageCSS();
             });
@@ -1041,7 +1041,7 @@ angular.module('hex').directive('hexView', function () {
             }).bind("paste", function (data) {
                 data = data.originalEvent.clipboardData || $window.clipboardData;
                 var text = data.getData('Text');
-                console.log(text)
+                console.log(text);
                 scope.buffer.current+=scope.buffer.pasteSequence(text,scope.buffer.current);
                 render();
                 scope.$apply();
@@ -1068,7 +1068,7 @@ angular.module('hex').directive('hexView', function () {
             });
             element.on("mouseleave",function (e) {
                 render_hightlight(-1);
-            })
+            });
 
             $(window).on('mouseup',function () {
                 scrollbar_grip = false;

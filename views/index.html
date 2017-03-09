@@ -285,7 +285,7 @@
                     <div style="margin-top:10px;float:left;width: 100%;">
                         <div class="input-group input-group-sm" tooltip="Enter expression to evaluate here. You can use math operations + - / * (), access current selection as array: sel[0], sel[1] etc, or enter inspector variable" tooltip-popup-delay="500">
                             <span class="input-group-addon">EXPR:</span>
-                            <input type="text" class="form-control" ng-model="inspector.script" ng-change="compileScript(inspector.script);">
+                            <input type="text" class="form-control" ng-model="inspector.script" ng-change="evalScript(inspector.script);">
                         </div>
                         <div class="input-group input-group-sm">
                             <span class="input-group-addon">VALUE:</span>
