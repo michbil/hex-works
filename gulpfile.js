@@ -14,21 +14,6 @@ gulp.task('copy', function() {
         .pipe(gulp.dest('./dist/'));
 });
 
-gulp.task('hex', function() {
-
-    return gulp.src('src/index.js')
-        .pipe(browserify({
-            debug:true
-        }))
-        .pipe(sourcemaps.init({loadMaps: true})) // loads map from browserify file
-        .pipe(uglify({mangle: false}))
-        .pipe(sourcemaps.write('./')) // writes .map file
-        .pipe(gulp.dest('./dist/'))
-        .on('error', function(err) {
-            console.log('Build error:', err.toString());
-        })
-});
-
 gulp.task('generate-service-worker', function(callback) {
     var path = require('path');
     var swPrecache = require('sw-precache');
@@ -41,4 +26,4 @@ gulp.task('generate-service-worker', function(callback) {
 });
 
 
-gulp.task('default', ['copy','hex','generate-service-worker']);
+gulp.task('default', ['copy','generate-service-worker']);
