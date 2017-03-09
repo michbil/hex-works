@@ -139,23 +139,23 @@
                 <li>
                     <a href="javascript:;" title="Upload file from local computer">
                     <label class="uploadfile">
-                        <span class="mdi-action-backup white" aria-hidden="true"></span>
+                        <span class="cloud-upload white" aria-hidden="true"></span>
                         <file></file>{{locale.open}}
                     </label>
                     </a>
                 </li>
                 <li>
                     <a href="" ng-click="saveFile()" title="Save file to local disk">
-                        <span class="mdi-file-cloud-download white" aria-hidden="true"></span>&nbsp {{locale.save}}</a>
+                        <span class="download white" aria-hidden="true"></span>&nbsp {{locale.save}}</a>
                 </li>
                 <li>
                     <a id="navbar_copy" class="clip_button" data-clipboard-text="Copy22 Me!" title="Copy current buffer to clipboard entirely">
-                        <span class="mdi-content-content-copy white" aria-hidden="true"></span>
+                        <span class="zmdi-content-content-copy white" aria-hidden="true"></span>
                         {{locale.copyclip}}<span class="foontpeek">.</span>
                     </a>
                 </li>
                 <li><a href="" onclick="$('#myModal').modal()">
-                    <span class="mdi-action-info-outline white" aria-hidden="true"></span>&nbsp
+                    <span class="zmdi-action-info-outline white" aria-hidden="true"></span>&nbsp
                     {{locale.information}}</a></li>
 
 
@@ -381,9 +381,8 @@
     }(document, 'script', 'facebook-jssdk'));
 </script>
 
-<link href="../material/css/ripples.min.css" rel="stylesheet">
-<link href="../material/css/material-wfont.min.css" rel="stylesheet">
-
+<link href="../material/css/bootstrap-material-design.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css">
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
 <script src="https://apis.google.com/js/platform.js" async defer>
     {lang: 'ru'}
