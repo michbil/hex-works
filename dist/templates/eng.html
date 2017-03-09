@@ -1,0 +1,46 @@
+<h2>Purpose</h2>
+<p>
+    This is <b>hex editor</b> beta version. Main purpose of this application is editing and analyzing small binary files, mostly eeprom dumps.
+    For now you can open,save,copy to clipboard files. Multiple tabs available.
+</p>
+<p>
+    To find binary data in files inspector tool is available. There is also color marking tool.
+</p>
+<p>
+    This is still early beta, so feel free to post any feedback to <a href="mailto:info@elx.com.ua">info@elx.com.ua</a>
+</p>
+<p>
+    Sources available at <a href="https://github.com/michbil/hex-works">Github</a><br>
+    &copy Michael Bilenko 2015/2016
+</p>
+
+<h2>Hex-editing concepts</h2>
+<p>This is main window of hex editor, it has three columns, first blue column represents adress from beginning
+of the file, second column contains hex values of bytes, third column represent ASCII values of bytes.</p>
+<img class="helpimg" src="/img/hexrepr.png">
+<p>Using color buttons above you can colorize interesting areas of hex dump, you can colorize bytes on per-byte basis or
+    colorize current selection. By clicking "Apply this color set to all tabs" you can share current tab colorset with all files,
+    it really helps when comparing different versions of one file.
+</p>
+<p>
+Editor supports multiple tab editing and comparing. Once opened all files will be stored in your browsers's local storage
+    (on your computer) therefore afer closing editor all your tabs data and color schemes will be opened again.
+
+</p>
+<img src="/img/tabs.png">
+<h3>Inspector tool</h3>
+<p>Once you select some bytes or click on colorized region you can see this data representation in inspector window.
+Here you can see data representation in hex, decimal form, in straight and reverse order. Inverted an not inverted form.
+    In checksum section you can calculate simple sum and xor checksums of datablock.
+</p>
+<img src="/img/inspector.png">
+<p>Once you have found interesting data you can change it right in inspector window, data will be
+changed in editor window instantly.</p>
+<p>
+    EXPR field allows you make mathematical calculations on inspector values, result will be displayed in value box.
+    To choose variable click on interesting value's label.
+</p>
+<h2>Comparing binary files</h2>
+<p>You can compare tabs to each other by right-clicking tab and selecting tab to compare. Mismatching bytes will be marked
+with red text color.</p>
+<img src="/img/compare.png">

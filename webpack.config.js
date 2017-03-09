@@ -1,8 +1,14 @@
 var path = require('path');
 var webpack = require('webpack');
 
+
 var e = {
-    entry: './src/index.js',
+    entry: [
+    //    "./views/lib/sw.js",
+        "./views/material/js/ripples.min.js",
+        "./views/material/js/material.min.js",
+        "./views/lib/webfont.js",
+        './src/index.js'],
     output: {
         path: './dist/',
         filename: 'index.js',
@@ -14,7 +20,7 @@ var e = {
             {
                 test: /.js?$/,
                 loader: 'babel-loader',
-                exclude: /node_modules/,
+                exclude: [/node_modules/,/views/],
                 query: {
                     presets: ['react', 'es2015','stage-0']
                 }
@@ -31,7 +37,14 @@ var e = {
         inline:true,
         historyApiFallback: true
     },
-    devtool: 'inline-source-map'
+    plugins: [
+        new webpack.optimize.UglifyJsPlugin({
+            compress:{
+                warnings: false,
+            },
+            mangle: false
+    })],
+    devtool: 'source-map'
 
 
 };

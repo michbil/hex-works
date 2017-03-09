@@ -3,6 +3,9 @@
  */
 
 import keys from './keys.js'
+import Hammer from 'hammerjs'
+import {toHex,toChar,alignToLength,hexInvert,reverseByteString,stringToByteSeq} from './utils.js'
+
 
 var is_Mac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 

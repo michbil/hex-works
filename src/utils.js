@@ -1,4 +1,4 @@
-function stringToByteSeq(buffer) {
+export function stringToByteSeq(buffer) {
 
     var res = []
 
@@ -17,7 +17,7 @@ function stringToByteSeq(buffer) {
 
 }
 
-function toHex(number, length) {
+export function toHex(number, length) {
     'use strict';
 
     if (typeof number === "undefined") {
@@ -33,7 +33,7 @@ function toHex(number, length) {
     return s;
 }
 
-function hexInvert(s) {
+export function hexInvert(s) {
     'use strict';
     if ((s.length % 2) !== 0) {
         throw new Error("Non even bytes in string");
@@ -51,7 +51,7 @@ function hexInvert(s) {
     return res;
 }
 
-function hexEncode(value,len) {
+export function hexEncode(value,len) {
     'use strict';
     var s = "";
     for (var i=0;i<len;i++) {
@@ -61,7 +61,7 @@ function hexEncode(value,len) {
 
 }
 
-function reverseByteString(s) {
+export function reverseByteString(s) {
     'use strict';
     if ((s.length % 2) !== 0) {
         throw new Error("Non even bytes in string");
@@ -74,7 +74,7 @@ function reverseByteString(s) {
     return res;
 }
 
-function alignToLength(number, length) {
+export function alignToLength(number, length) {
     'use strict';
 
     var s = number;
@@ -84,13 +84,13 @@ function alignToLength(number, length) {
     return s;
 }
 
-function toChar(number) {
+export function toChar(number) {
     'use strict';
     if (number > 127) return '.'
     return number <= 32 ? '.' : String.fromCharCode(number);
 }
 
-function generateUUID() {
+export function generateUUID() {
     'use strict';
     var d = new Date().getTime();
     var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -112,7 +112,7 @@ function generateUUID() {
 /**
  * Creates a new empty BitArray with the given length or initialises the BitArray with the given hex representation.
  */
-var BitArray = function (size, hex) {
+export const BitArray = function (size, hex) {
     this.values = [];
 
     if (hex) {

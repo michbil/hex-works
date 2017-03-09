@@ -4,9 +4,6 @@ import hexview from './hexview'
 import fromcontrols from './formcontrols'
 
 
-if (!(Modernizr.canvas && Modernizr.canvastext)) {
-    alert("Your browser is outdated, update to Google Chrome, firefox");
-}
 window.emulate_calc = function () {
     $('.bodycont').css('height', '100%').css('height', '-=134px');
 

@@ -4,8 +4,11 @@ import uibootstrap from 'angular-ui-bootstrap'
 import BinBuf from './binbuf.js'
 import {englocale,ruslocale} from './locale'
 import keys from './keys.js'
-
-
+import Clipboard from 'clipboard';
+import jBinary from 'jbinary';
+import localforage from 'localforage';
+import {toHex,toChar,alignToLength,hexInvert,hexEncode,reverseByteString,stringToByteSeq} from './utils.js'
+import {saveAs} from 'file-saver';
 
 var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
     'use strict';
@@ -122,8 +125,7 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
         });
 
         $scope.ready = 1;
-        ZeroClipboard.config( { swfPath: "/lib/ZeroClipboard.swf" } );
-        var client = new ZeroClipboard( $(".clip_button") );
+        var client = new Clipboard(".clip_button" );
         client.on( "copy", function (event) {
             var clipboard = event.clipboardData;
             var target  = $(event.target).attr("id");

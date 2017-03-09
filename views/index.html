@@ -25,23 +25,7 @@
 <body ng-controller="main" ng-cloak>
 
 <div id="fb-root"></div>
-<script>
-    window.fbAsyncInit = function() {
-        FB.init({
-            appId      : '656756204436636',
-            xfbml      : true,
-            version    : 'v2.2'
-        });
-    };
 
-    (function(d, s, id){
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) {return;}
-        js = d.createElement(s); js.id = id;
-        js.src = "//connect.facebook.net/en_US/sdk.js";
-        fjs.parentNode.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
-</script>
 
 
 <!-- Modal -->
@@ -355,49 +339,33 @@
         <li><a tabindex="-1" href="#" ng-click="selectAll();">Select All</a></li>
     </ul>
 </div>
-<script src="/lib/sw.js"></script>
-<script src="/lib/FileSaver.min.js"></script>
-<script src="/lib/jdataview.js"></script>
-<script src="/lib/utils.js"></script>
-<script type="text/javascript" src="/lib/ZeroClipboard.js"></script>
+
 <script src="/lib/jquery-2.1.3.min.js"></script>
 <script src="/lib/jquery.mousewheel.js"></script>
-<script src="/lib/modernizr.js"></script>
-<script src="/lib/jbinary.js"></script>
 <script src="/material/js/ripples.min.js"></script>
 <script src="/material/js/material.min.js"></script>
-<script src="/lib/hammer.min.js"></script>
 <script src="/lib/bootstrap.min.js"></script>
 <script src="/lib/bootstrap-contextmenu.js"></script>
-
-<script src="/lib/localforage.js"></script>
-<script src="/lib/webfont.js"></script>
-
 <script src="/index.js"></script>
 
 
-<script type="text/javascript">
-(function (d, w, c) {
-    (w[c] = w[c] || []).push(function() {
-        try {
-            w.yaCounter27922626 = new Ya.Metrika({id:27922626});
-        } catch(e) { }
-    });
+<script>
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId      : '656756204436636',
+            xfbml      : true,
+            version    : 'v2.2'
+        });
+    };
 
-    var n = d.getElementsByTagName("script")[0],
-        s = d.createElement("script"),
-        f = function () { n.parentNode.insertBefore(s, n); };
-    s.type = "text/javascript";
-    s.async = true;
-    s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js";
-
-    if (w.opera == "[object Opera]") {
-        d.addEventListener("DOMContentLoaded", f, false);
-    } else { f(); }
-})(document, window, "yandex_metrika_callbacks");
+    (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "//connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
 </script>
-<noscript><div><img src="//mc.yandex.ru/watch/27922626" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-
 
 </body>
 </html>

@@ -1,3 +1,5 @@
+import jBinary from 'jbinary'
+import {generateUUID,toHex,toChar,alignToLength,hexInvert,reverseByteString,stringToByteSeq} from './utils.js'
 
 function BinBuf(len) {
     'use strict';
