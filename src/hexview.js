@@ -723,20 +723,8 @@ angular.module('hex').directive('hexView', function () {
                 break;
             case 86:
                 if (key.ctrlKey || key.metaKey) {
-
                     console.log("CTRLV");
-
                     $("textarea").focus();
-
-
-                }
-                break;
-            case 67:
-                if (key.ctrlKey || key.metaKey) {
-
-                    console.log("CTRL-C");
-                    $('#clipboard_modal').modal();
-
                 }
                 break;
             default:

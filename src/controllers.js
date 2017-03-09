@@ -126,16 +126,20 @@ var MainCtrl = function ($scope, $http, scripting,$sce,$location) { // $location
 
         $scope.ready = 1;
         var client = new Clipboard(".clip_button" );
-        client.on( "copy", function (event) {
-            var clipboard = event.clipboardData;
-            var target  = $(event.target).attr("id");
-            if (target == "navbar_copy") {
-                clipboard.setData("text/plain", $scope.buffer.toString());
-            } else {
-                clipboard.setData("text/plain", $scope.buffer.getSelection());
-                $("#clipboard_modal").modal('hide');
-            }
+        const get_clip_data = () => $scope.buffer.getSelection();
 
+        $('body').on('copy',(e) => {
+            $("#clipTarget").attr('value',get_clip_data());
+            $('#clipboard_modal').modal();
+        });
+
+        client.on( "success",  (event) => {
+            $("#clipboard_modal").modal('hide');
+            console.log("Copied successfully",event);
+        });
+
+        client.on('error', (e) => {
+            console.log("Clipboard error",e);
         });
 
 

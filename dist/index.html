@@ -98,10 +98,11 @@
     <div class="modal-dialog">
         <div class="modal-content">
 
-            <div id="modal_clip_confirm" class="modal-body clip_button" data-clipboard-text="Default hex" title="Copy current selection to clipboard">
+            <button id="modal_clip_confirm" class="modal-body clip_button" data-clipboard-target="#clipTarget" title="Copy current selection to clipboard">
                 <img src="/img/clipboard.png" class="center-block">
                 <h1 class="text-center" >Copy selection to OS clipboard?</h1>
-            </div>
+                <input id="clipTarget"/>
+            </button>
 
         </div>
     </div>
