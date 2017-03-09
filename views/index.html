@@ -27,6 +27,25 @@
 <div id="fb-root"></div>
 
 
+<div id="context-tab">
+    <ul class="dropdown-menu" role="menu">
+        <li><a tabindex="-1" href="#">Change buffer size</a></li>
+        <li class="divider"></li>
+        <li ng-repeat="tabi in tabs"><a tabindex="-1" href="#" ng-click="compareToTab(tabi)">Compare to {{tabi.name}}</a></li>
+    </ul>
+</div>
+<div id="context-editor">
+    <ul class="dropdown-menu" role="menu">
+        <li><a tabindex="-1" href="#" ng-click="clearMarkers()">Clear markers</a></li>
+        <li><a tabindex="-1" href="#" ng-click="swapBytes()">Swap bytes</a></li>
+        <li><a tabindex="-1" href="#" ng-click="xorDialog();">XOR...</a></li>
+        <li><a tabindex="-1" href="#" ng-click="fillDialog();">FILL...</a></li>
+        <li class="divider"></li>
+        <li><a class="clip_button" id="context_copy" data-clipboard-text="Context copy" tabindex="-1" href="#">Copy</a></li>
+        <li><a tabindex="-1" href="#" ng-click="cmdPaste();">Paste...</a></li>
+        <li><a tabindex="-1" href="#" ng-click="selectAll();">Select All</a></li>
+    </ul>
+</div>
 
 <!-- Modal -->
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -320,25 +339,6 @@
     <textarea></textarea>
 
 
-<div id="context-tab">
-    <ul class="dropdown-menu" role="menu">
-        <li><a tabindex="-1" href="#">Change buffer size</a></li>
-        <li class="divider"></li>
-        <li ng-repeat="tabi in tabs"><a tabindex="-1" href="#" ng-click="compareToTab(tabi)">Compare to {{tabi.name}}</a></li>
-    </ul>
-</div>
-<div id="context-editor">
-    <ul class="dropdown-menu" role="menu">
-        <li><a tabindex="-1" href="#" ng-click="clearMarkers()">Clear markers</a></li>
-        <li><a tabindex="-1" href="#" ng-click="swapBytes()">Swap bytes</a></li>
-        <li><a tabindex="-1" href="#" ng-click="xorDialog();">XOR...</a></li>
-        <li><a tabindex="-1" href="#" ng-click="fillDialog();">FILL...</a></li>
-        <li class="divider"></li>
-        <li><a class="clip_button" id="context_copy" data-clipboard-text="Context copy" tabindex="-1" href="#">Copy</a></li>
-        <li><a tabindex="-1" href="#" ng-click="cmdPaste();">Paste...</a></li>
-        <li><a tabindex="-1" href="#" ng-click="selectAll();">Select All</a></li>
-    </ul>
-</div>
 
 <script src="/lib/jquery-2.1.3.min.js"></script>
 <script src="/lib/jquery.mousewheel.js"></script>
