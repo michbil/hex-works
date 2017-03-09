@@ -17,23 +17,3 @@ window.emulate_calc = function () {
 
     //$('.bodycont').css('height', '100%').css('height', '-=134px');
 };
-window.font_loaded_ok = false;
-
-function rdyfont() {
-    console.log("Font loaded");
-    window.font_loaded_ok = true;
-    if (font_load_callback) {
-        font_load_callback();
-    }
-}
-window.font_load_callback = false;
-WebFont.load({
-    google: {
-        families: ['Source Code Pro:500']
-    },
-    active: rdyfont,
-    inactive: function () {
-        console.log("Cant load font....");
-        setTimeout(rdyfont,1000);
-    }
-});
