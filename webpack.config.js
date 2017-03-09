@@ -7,7 +7,7 @@ var e = {
         //"./views/lib/sw.js",
         "./views/material/js/ripples.min.js",
         "./views/material/js/material.min.js",
-      //  "./views/lib/webfont.js",
+        "./views/lib/webfont.js",
         './src/index.js'],
     output: {
         path: './dist/',
