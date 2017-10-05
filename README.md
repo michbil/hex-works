@@ -18,6 +18,6 @@ npm install -g webpack-dev-server
 To start development server, run
 ```
 webpack-dev-server
-``
+```
 
 editor will be live at localhost:8000
