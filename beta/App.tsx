@@ -55,7 +55,7 @@ function HexEditorApp() {
         {/* Right Panel with tabs */}
         <View style={styles.rightPanel}>
           {/* Tab bar */}
-          <View style={styles.panelTabBar}>
+          <View style={styles.panelTabBar} testID="panel-tab-bar">
             <TouchableOpacity
               style={[styles.panelTab, rightTab === 'inspector' && styles.panelTabActive]}
               onPress={() => setRightTab('inspector')}
@@ -84,18 +84,22 @@ function HexEditorApp() {
 
           {/* Tab content */}
           {rightTab === 'inspector' && (
-            <ScrollView style={styles.inspectorContent}>
+            <ScrollView style={styles.inspectorContent} testID="inspector-panel">
               <Inspector />
             </ScrollView>
           )}
           {rightTab === 'search' && (
-            <SearchPanel onClose={() => setRightTab('inspector')} />
+            <View testID="search-panel" style={{flex: 1}}>
+              <SearchPanel onClose={() => setRightTab('inspector')} />
+            </View>
           )}
           {rightTab === 'script' && (
-            <ScriptPanel
-              onClose={() => setRightTab('inspector')}
-              onBufferModified={handleBufferModified}
-            />
+            <View testID="script-panel" style={{flex: 1}}>
+              <ScriptPanel
+                onClose={() => setRightTab('inspector')}
+                onBufferModified={handleBufferModified}
+              />
+            </View>
           )}
         </View>
       </View>

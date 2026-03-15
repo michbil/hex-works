@@ -134,7 +134,7 @@ export function TabBar() {
   if (tabs.length === 0) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="tab-bar">
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollView}>
         {tabs.map((tab, index) => (
           <View
