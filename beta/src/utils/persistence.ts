@@ -86,15 +86,20 @@ export interface SavedTab {
 export async function saveTabs(
   tabs: Array<{ id: string; buffer: BinaryBuffer; fileName: string }>,
   activeIndex: number,
+  /** When provided, only tabs whose id is in this set will be re-serialized.
+   *  Tab order and active index are always saved. */
+  dirtyIds?: Set<string>,
 ): Promise<void> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
 
-    // Save each tab under its UUID
+    // Save each tab under its UUID — skip unchanged tabs when dirtyIds provided
     const tabnames: string[] = [];
     for (const tab of tabs) {
+      tabnames.push(tab.id);
+      if (dirtyIds && !dirtyIds.has(tab.id)) continue;
       const dict = tab.buffer.saveToDict();
       // Store in the same format as Angular's BinBuf.saveToDict()
       await idbPut(store, tab.id, {
@@ -103,7 +108,6 @@ export async function saveTabs(
         data: dict.data,     // hex string
         uuid: tab.id,
       } satisfies TabDict);
-      tabnames.push(tab.id);
     }
 
     // Store tab order (Angular format: just an array of UUIDs)

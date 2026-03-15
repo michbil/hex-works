@@ -298,12 +298,14 @@ export class BinaryBuffer {
 
   // Convert to hex string
   toHexString(offset: number = 0, length?: number): string {
+    const table = BinaryBuffer.HEX_TABLE_LOWER;
     const len = length ?? this.data.length - offset;
-    let result = '';
-    for (let i = 0; i < len && offset + i < this.data.length; i++) {
-      result += this.data[offset + i].toString(16).padStart(2, '0');
+    const end = Math.min(offset + len, this.data.length);
+    const parts = new Array<string>(end - offset);
+    for (let i = offset; i < end; i++) {
+      parts[i - offset] = table[this.data[i]];
     }
-    return result;
+    return parts.join('');
   }
 
   // Convert to ASCII string (printable characters only)
@@ -410,12 +412,30 @@ export class BinaryBuffer {
   }
 
   // Convert buffer to hex string
-  toBuffer(): string {
-    let out = '';
-    for (let i = 0; i < this.data.length; i++) {
-      out += this.toHex(this.data[i], 2);
+  private static HEX_TABLE_UPPER: string[] = (() => {
+    const chars = '0123456789ABCDEF';
+    const table = new Array<string>(256);
+    for (let i = 0; i < 256; i++) {
+      table[i] = chars[i >> 4] + chars[i & 0x0f];
     }
-    return out;
+    return table;
+  })();
+  private static HEX_TABLE_LOWER: string[] = (() => {
+    const chars = '0123456789abcdef';
+    const table = new Array<string>(256);
+    for (let i = 0; i < 256; i++) {
+      table[i] = chars[i >> 4] + chars[i & 0x0f];
+    }
+    return table;
+  })();
+
+  toBuffer(): string {
+    const table = BinaryBuffer.HEX_TABLE_UPPER;
+    const parts = new Array<string>(this.data.length);
+    for (let i = 0; i < this.data.length; i++) {
+      parts[i] = table[this.data[i]];
+    }
+    return parts.join('');
   }
 
   // Load from hex string
