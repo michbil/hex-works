@@ -4,7 +4,7 @@
  * Supports desktop (mouse) and mobile (touch) interactions
  */
 
-import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useEffectEvent, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { createPortal } from 'react-dom';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
@@ -114,7 +114,6 @@ export function HexView({
     selection,
     isEditing,
     editNibble,
-    renderKey,
     setCursorPosition,
     setScrollOffset,
     setSelection,
@@ -125,7 +124,6 @@ export function HexView({
     swapBytes,
     fillSelection,
     getColorBuffer,
-    masterTabId,
     setBytesPerLine,
   } = useHexEditorStore();
 
@@ -140,30 +138,14 @@ export function HexView({
   }, [isMobile, dimensions.width, fontSize, bytesPerLine, setBytesPerLine]);
 
   // Calculate layout metrics
-  const metrics = useMemo(() => {
-    const charWidth = fontSize * 0.6; // Approximate monospace char width
-    const lineHeight = fontSize + 4;
-    const addressWidth = charWidth * 9; // 8 chars + space
-    const useSpaces = true; // Always use spaces between hex bytes, like Angular version
-    const hexCharWidth = useSpaces ? 3 : 2; // "XX " or "XX"
-    const hexWidth = charWidth * bytesPerLine * hexCharWidth;
-    const asciiWidth = charWidth * bytesPerLine;
-    const gap = charWidth * 2;
-    const scrollbarX = dimensions.width - SCROLLBAR_WIDTH;
-
-    return {
-      charWidth,
-      lineHeight,
-      addressWidth,
-      hexWidth,
-      asciiWidth,
-      gap,
-      useSpaces,
-      hexCharWidth,
-      scrollbarX,
-      visibleRows: Math.floor(dimensions.height / lineHeight),
-    };
-  }, [fontSize, bytesPerLine, dimensions, SCROLLBAR_WIDTH]);
+  const charWidth = fontSize * 0.6;
+  const lineHeight = fontSize + 4;
+  const addressWidth = charWidth * 9;
+  const useSpaces = true;
+  const hexCharWidth = useSpaces ? 3 : 2;
+  const gap = charWidth * 2;
+  const scrollbarX = dimensions.width - SCROLLBAR_WIDTH;
+  const visibleRows = Math.floor(dimensions.height / lineHeight);
 
   // Handle resize — measure actual container element
   useEffect(() => {
@@ -193,41 +175,35 @@ export function HexView({
   }, [propWidth, propHeight]);
 
   // Get background color for a byte
-  const getByteBackground = useCallback(
-    (index: number): string => {
-      if (!buffer) return COLOR_MAP[0];
+  const getByteBackground = (index: number): string => {
+    if (!buffer) return COLOR_MAP[0];
 
-      const selStart = Math.min(selection.start, selection.end);
-      const selEnd = Math.max(selection.start, selection.end);
-      if (index >= selStart && index <= selEnd && selStart !== selEnd) {
-        return '#999999';
-      }
+    const selStart = Math.min(selection.start, selection.end);
+    const selEnd = Math.max(selection.start, selection.end);
+    if (index >= selStart && index <= selEnd && selStart !== selEnd) {
+      return '#999999';
+    }
 
-      const colorBuf = getColorBuffer() ?? buffer;
-      const colorCode = colorBuf.getColor?.(index) ?? 0;
-      return COLOR_MAP[colorCode] || COLOR_MAP[0];
-    },
-    [buffer, selection, getColorBuffer, masterTabId]
-  );
+    const colorBuf = getColorBuffer() ?? buffer;
+    const colorCode = colorBuf.getColor?.(index) ?? 0;
+    return COLOR_MAP[colorCode] || COLOR_MAP[0];
+  };
 
   // Check if byte is marked (modified)
-  const isMarked = useCallback(
-    (index: number): boolean => {
-      return buffer?.isMarked?.(index) ?? false;
-    },
-    [buffer]
-  );
+  const isMarked = (index: number): boolean => {
+    return buffer?.isMarked?.(index) ?? false;
+  };
 
   // Calculate scrollbar parameters
-  const getScrollbarParams = useCallback(() => {
+  const getScrollbarParams = () => {
     if (!buffer) return null;
     const totalBytes = buffer.length;
     const totalLines = Math.ceil(totalBytes / bytesPerLine);
-    if (totalLines <= metrics.visibleRows) return null;
+    if (totalLines <= visibleRows) return null;
 
-    const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
+    const maxOffset = Math.max(0, (totalLines - visibleRows) * bytesPerLine);
     const canvasHeight = dimensions.height;
-    let gripHeight = canvasHeight * metrics.visibleRows / totalLines;
+    let gripHeight = canvasHeight * visibleRows / totalLines;
     if (gripHeight < MIN_GRIP_HEIGHT) gripHeight = MIN_GRIP_HEIGHT;
 
     const gripTop = maxOffset > 0
@@ -235,13 +211,13 @@ export function HexView({
       : 0;
 
     return { top: gripTop, height: gripHeight, maxOffset };
-  }, [buffer, metrics.visibleRows, bytesPerLine, scrollOffset, dimensions.height, MIN_GRIP_HEIGHT]);
+  };
 
   // Reverse-compute: pixel Y → buffer offset (for scrollbar drag)
-  const reverseScrollCompute = useCallback((y: number) => {
+  const reverseScrollCompute = (y: number) => {
     if (!buffer) return 0;
     const totalLines = Math.ceil(buffer.length / bytesPerLine);
-    const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
+    const maxOffset = Math.max(0, (totalLines - visibleRows) * bytesPerLine);
     const params = scrollbarParamsRef.current;
     if (!params) return 0;
 
@@ -255,25 +231,24 @@ export function HexView({
     if (offset < 0) offset = 0;
     if (offset > maxOffset) offset = maxOffset;
     return offset;
-  }, [buffer, metrics.visibleRows, bytesPerLine, dimensions.height]);
+  };
 
   // Helper: compute max scroll offset
-  const getMaxOffset = useCallback(() => {
+  const getMaxOffset = () => {
     if (!buffer) return 0;
     const totalLines = Math.ceil(buffer.length / bytesPerLine);
-    return Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
-  }, [buffer, bytesPerLine, metrics.visibleRows]);
+    return Math.max(0, (totalLines - visibleRows) * bytesPerLine);
+  };
 
   // Helper: clamp scroll offset
-  const clampOffset = useCallback((offset: number) => {
+  const clampOffset = (offset: number) => {
     return Math.max(0, Math.min(getMaxOffset(), offset));
-  }, [getMaxOffset]);
+  };
 
   // Hit-test: canvas coordinates → byte index
-  const hitTestByte = useCallback((x: number, y: number): { byteIndex: number; isAscii: boolean } | null => {
+  const hitTestByte = (x: number, y: number): { byteIndex: number; isAscii: boolean } | null => {
     if (!buffer) return null;
 
-    const { lineHeight, addressWidth, charWidth, hexCharWidth } = metrics;
     const row = Math.floor(y / lineHeight);
     const startLine = Math.floor(scrollOffset / bytesPerLine);
     const lineOffset = (startLine + row) * bytesPerLine;
@@ -282,7 +257,7 @@ export function HexView({
     let isAscii = false;
 
     const hexEnd = addressWidth + charWidth * bytesPerLine * hexCharWidth;
-    const asciiStart = hexEnd + metrics.gap;
+    const asciiStart = hexEnd + gap;
 
     if (x >= addressWidth && x < hexEnd) {
       col = Math.floor((x - addressWidth) / (charWidth * hexCharWidth));
@@ -298,17 +273,15 @@ export function HexView({
     if (byteIndex < 0 || byteIndex >= buffer.length) return null;
 
     return { byteIndex, isAscii };
-  }, [buffer, metrics, scrollOffset, bytesPerLine]);
+  };
 
   // Render the hex view on canvas
-  const render = useCallback(() => {
+  const render = () => {
     if (Platform.OS !== 'web') return;
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx || !buffer) return;
-
-    const { lineHeight, addressWidth, charWidth, useSpaces, hexCharWidth, visibleRows } = metrics;
 
     canvas.width = dimensions.width * dpr;
     canvas.height = dimensions.height * dpr;
@@ -333,7 +306,7 @@ export function HexView({
       ctx.fillText(addressToHex(lineOffset, 8), 0, y);
 
       let hexX = addressWidth;
-      let asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + metrics.gap;
+      let asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + gap;
 
       for (let col = 0; col < bytesPerLine; col++) {
         const byteIndex = lineOffset + col;
@@ -363,18 +336,14 @@ export function HexView({
     scrollbarParamsRef.current = sbParams;
     if (sbParams) {
       ctx.fillStyle = '#f0f0f0';
-      ctx.fillRect(metrics.scrollbarX, 0, SCROLLBAR_WIDTH, dimensions.height);
+      ctx.fillRect(scrollbarX, 0, SCROLLBAR_WIDTH, dimensions.height);
       ctx.fillStyle = '#aaaaaa';
-      ctx.fillRect(metrics.scrollbarX, sbParams.top, SCROLLBAR_WIDTH, sbParams.height);
+      ctx.fillRect(scrollbarX, sbParams.top, SCROLLBAR_WIDTH, sbParams.height);
     }
-  }, [
-    buffer, scrollOffset, bytesPerLine, metrics, fontSize, fontFamily,
-    getByteBackground, isMarked, dpr, dimensions, renderKey,
-    getScrollbarParams, SCROLLBAR_WIDTH,
-  ]);
+  };
 
   // Render cursor
-  const renderCursor = useCallback(() => {
+  const renderCursor = () => {
     if (Platform.OS !== 'web') return;
 
     const canvas = cursorCanvasRef.current;
@@ -389,12 +358,11 @@ export function HexView({
 
     if (!focused) return;
 
-    const { lineHeight, addressWidth, charWidth, hexCharWidth } = metrics;
     const startLine = Math.floor(scrollOffset / bytesPerLine);
     const cursorLine = Math.floor(cursorPosition / bytesPerLine);
     const cursorCol = cursorPosition % bytesPerLine;
 
-    if (cursorLine < startLine || cursorLine >= startLine + metrics.visibleRows) return;
+    if (cursorLine < startLine || cursorLine >= startLine + visibleRows) return;
 
     const row = cursorLine - startLine;
     const y = (row + 1) * lineHeight;
@@ -403,106 +371,102 @@ export function HexView({
     ctx.fillStyle = '#449';
 
     if (textMode) {
-      const asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + metrics.gap + cursorCol * charWidth;
+      const asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + gap + cursorCol * charWidth;
       ctx.fillRect(asciiX, y - lineHeight + 2, charWidth, lineHeight);
     } else {
       const hexX = addressWidth + cursorCol * charWidth * hexCharWidth;
       const nibbleOffset = editNibble === 'low' ? charWidth : 0;
       ctx.fillRect(hexX + nibbleOffset, y - lineHeight + 2, charWidth, lineHeight);
     }
-  }, [buffer, cursorPosition, scrollOffset, bytesPerLine, focused, textMode, editNibble, metrics, dpr, dimensions]);
+  };
 
   // Re-render when state changes
   useEffect(() => {
     render();
     renderCursor();
-  }, [render, renderCursor]);
+  });
 
   // Global mouse handlers for scrollbar drag
+  const onScrollbarDrag = useEffectEvent((e: MouseEvent) => {
+    if (!scrollbarGripRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
+    setScrollOffset(offset);
+  });
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!scrollbarGripRef.current) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
-      setScrollOffset(offset);
-    };
 
     const handleGlobalMouseUp = () => {
       scrollbarGripRef.current = false;
     };
 
-    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mousemove', onScrollbarDrag);
     window.addEventListener('mouseup', handleGlobalMouseUp);
     return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mousemove', onScrollbarDrag);
       window.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [reverseScrollCompute, setScrollOffset]);
+  }, []);
 
   // Mouse event handlers
-  const handleMouseEvent = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>, eventType: 'down' | 'up' | 'move') => {
-      if (!buffer) return;
-      if (event.button === 2) return;
+  const handleMouseEvent = (event: React.MouseEvent<HTMLCanvasElement>, eventType: 'down' | 'up' | 'move') => {
+    if (!buffer) return;
+    if (event.button === 2) return;
 
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
-      // Scrollbar interaction
-      if (x > metrics.scrollbarX - 5) {
-        if (eventType === 'down') {
-          const sbParams = scrollbarParamsRef.current;
-          if (sbParams) {
-            if (y >= sbParams.top && y <= sbParams.top + sbParams.height) {
-              scrollbarGripRef.current = true;
-              scrollbarDragOffsetRef.current = sbParams.top - y;
-            } else {
-              scrollbarGripRef.current = true;
-              scrollbarDragOffsetRef.current = -(sbParams.height / 2);
-              const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
-              setScrollOffset(offset);
-            }
+    // Scrollbar interaction
+    if (x > scrollbarX - 5) {
+      if (eventType === 'down') {
+        const sbParams = scrollbarParamsRef.current;
+        if (sbParams) {
+          if (y >= sbParams.top && y <= sbParams.top + sbParams.height) {
+            scrollbarGripRef.current = true;
+            scrollbarDragOffsetRef.current = sbParams.top - y;
+          } else {
+            scrollbarGripRef.current = true;
+            scrollbarDragOffsetRef.current = -(sbParams.height / 2);
+            const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
+            setScrollOffset(offset);
           }
         }
-        return;
+      }
+      return;
+    }
+
+    if (scrollbarGripRef.current) return;
+
+    const hit = hitTestByte(x, y);
+    if (!hit) return;
+
+    const { byteIndex, isAscii } = hit;
+
+    if (eventType === 'down') {
+      setTextMode(isAscii);
+      setCursorPosition(byteIndex);
+      setIsEditing(true);
+
+      if (!isAscii) {
+        const col = byteIndex % bytesPerLine;
+        const hexX = addressWidth + col * charWidth * hexCharWidth;
+        const relX = x - hexX;
+        setEditNibble(relX < charWidth ? 'high' : 'low');
       }
 
-      if (scrollbarGripRef.current) return;
-
-      const hit = hitTestByte(x, y);
-      if (!hit) return;
-
-      const { byteIndex, isAscii } = hit;
-
-      if (eventType === 'down') {
-        setTextMode(isAscii);
-        setCursorPosition(byteIndex);
-        setIsEditing(true);
-
-        if (!isAscii) {
-          const { addressWidth, charWidth, hexCharWidth } = metrics;
-          const col = byteIndex % bytesPerLine;
-          const hexX = addressWidth + col * charWidth * hexCharWidth;
-          const relX = x - hexX;
-          setEditNibble(relX < charWidth ? 'high' : 'low');
-        }
-
-        setSelection(byteIndex, byteIndex);
-      } else if (eventType === 'move' && event.buttons === 1) {
-        setSelection(selection.start, byteIndex);
-      }
-    },
-    [buffer, metrics, scrollOffset, bytesPerLine, setCursorPosition, setSelection, setIsEditing, setEditNibble, selection.start, reverseScrollCompute, setScrollOffset, hitTestByte]
-  );
+      setSelection(byteIndex, byteIndex);
+    } else if (eventType === 'move' && event.buttons === 1) {
+      setSelection(selection.start, byteIndex);
+    }
+  };
 
   // ── Touch handlers (mobile) ──────────────────────────────────────
 
@@ -576,7 +540,7 @@ export function HexView({
           }
         }
 
-        const linesDelta = dy / metrics.lineHeight;
+        const linesDelta = dy / lineHeight;
         const bytesDelta = Math.round(linesDelta) * bytesPerLine;
         const newOffset = clampOffset(touchScrollStartOffsetRef.current + bytesDelta);
         setScrollOffset(newOffset);
@@ -611,7 +575,7 @@ export function HexView({
           const tick = () => {
             v *= friction;
             if (Math.abs(v) < 0.01) return;
-            const deltaLines = v * 16 / metrics.lineHeight; // 16ms frame
+            const deltaLines = v * 16 / lineHeight; // 16ms frame
             const deltaBytes = Math.round(deltaLines) * bytesPerLine;
             if (deltaBytes === 0) { v *= 2; } // nudge if rounded to 0
             const currentOffset = useHexEditorStore.getState().scrollOffset;
@@ -636,7 +600,7 @@ export function HexView({
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
       if (momentumRafRef.current) cancelAnimationFrame(momentumRafRef.current);
     };
-  }, [isMobile, buffer, scrollOffset, bytesPerLine, metrics, hitTestByte, clampOffset, setCursorPosition, setIsEditing, setSelection, setScrollOffset]);
+  });
 
   // Wheel handler for scrolling
   useEffect(() => {
@@ -655,14 +619,14 @@ export function HexView({
 
     canvas.addEventListener('wheel', onWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', onWheel);
-  }, [buffer, bytesPerLine, scrollOffset, setScrollOffset, clampOffset]);
+  });
 
   // Focus handlers
-  const handleFocus = useCallback(() => setFocused(true), []);
-  const handleBlur = useCallback(() => setFocused(false), []);
+  const handleFocus = () => setFocused(true);
+  const handleBlur = () => setFocused(false);
 
   // Clipboard: copy selected bytes as hex string
-  const handleCopy = useCallback(async () => {
+  const handleCopy = async () => {
     if (!buffer) return;
     const selStart = Math.min(selection.start, selection.end);
     const selEnd = Math.max(selection.start, selection.end);
@@ -688,10 +652,10 @@ export function HexView({
       document.execCommand('copy');
       document.body.removeChild(ta);
     }
-  }, [buffer, selection, cursorPosition]);
+  };
 
   // Clipboard: paste hex string at cursor
-  const handlePaste = useCallback(async () => {
+  const handlePaste = async () => {
     if (!buffer) return;
     let text: string;
     try {
@@ -715,7 +679,7 @@ export function HexView({
     }
     setCursorPosition(Math.min(pos, buffer.length - 1));
     setSelection(cursorPosition, Math.min(cursorPosition + bytes.length - 1, buffer.length - 1));
-  }, [buffer, cursorPosition, setByte, setCursorPosition, setSelection]);
+  };
 
   // Context menu
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
@@ -750,7 +714,7 @@ export function HexView({
     };
   }, [ctxMenu]);
 
-  const handleFillSubmit = useCallback(() => {
+  const handleFillSubmit = () => {
     const seq = stringToByteSeq(fillValue);
     if (seq.length > 0) {
       fillSelection(seq, ctxDialog === 'xor');
@@ -758,11 +722,10 @@ export function HexView({
     setCtxMenu(null);
     setCtxDialog(null);
     setFillValue('');
-  }, [fillValue, fillSelection, ctxDialog]);
+  };
 
   // Keyboard handler — shared between canvas keydown and hidden input
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent | KeyboardEvent) => {
+  const handleKeyDown = (event: React.KeyboardEvent | KeyboardEvent) => {
       if (!buffer) return;
 
       const { key, shiftKey, ctrlKey, metaKey } = event;
@@ -811,10 +774,10 @@ export function HexView({
           d = bytesPerLine;
           break;
         case 'PageUp':
-          d = -bytesPerLine * metrics.visibleRows;
+          d = -bytesPerLine * visibleRows;
           break;
         case 'PageDown':
-          d = bytesPerLine * metrics.visibleRows;
+          d = bytesPerLine * visibleRows;
           break;
         case 'Home':
           newPosition = ctrlKey || metaKey ? 0 : Math.floor(cursorPosition / bytesPerLine) * bytesPerLine;
@@ -875,24 +838,17 @@ export function HexView({
 
       const cursorLine = Math.floor(newPosition / bytesPerLine);
       const startLine = Math.floor(scrollOffset / bytesPerLine);
-      const endLine = startLine + metrics.visibleRows - 1;
+      const endLine = startLine + visibleRows - 1;
 
       if (cursorLine < startLine) {
         setScrollOffset(cursorLine * bytesPerLine);
       } else if (cursorLine > endLine) {
-        setScrollOffset((cursorLine - metrics.visibleRows + 1) * bytesPerLine);
+        setScrollOffset((cursorLine - visibleRows + 1) * bytesPerLine);
       }
-    },
-    [
-      buffer, cursorPosition, bytesPerLine, scrollOffset,
-      textMode, isEditing, editNibble, selection, metrics.visibleRows,
-      setCursorPosition, setScrollOffset, setSelection, setByte, setEditNibble,
-      handleCopy, handlePaste,
-    ]
-  );
+  };
 
   // Hidden input handler for mobile keyboard
-  const handleHiddenInput = useCallback((e: any) => {
+  const handleHiddenInput = (e: any) => {
     const input = e.currentTarget as HTMLInputElement;
     const value = input.value;
     if (!value || !buffer) {
@@ -931,7 +887,7 @@ export function HexView({
     }
 
     input.value = '';
-  }, [buffer, cursorPosition, textMode, editNibble, setByte, setEditNibble, setCursorPosition, setSelection]);
+  };
 
   if (Platform.OS !== 'web') {
     return (

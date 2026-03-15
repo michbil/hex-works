@@ -4,7 +4,7 @@
  * Ported from AngularJS hex-works app.
  */
 
-import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
 
@@ -106,7 +106,7 @@ export function Inspector({}: InspectorProps) {
   const editingFieldRef = useRef<FieldId | null>(null);
 
   // Calculate selected byte range
-  const selRange = useMemo(() => {
+  const selRange = (() => {
     if (!buffer) return null;
     const start = Math.min(selection.start, selection.end);
     const end = Math.max(selection.start, selection.end);
@@ -115,10 +115,10 @@ export function Inspector({}: InspectorProps) {
     }
     const clampedEnd = Math.min(end, buffer.length - 1);
     return { start, end: clampedEnd, count: clampedEnd - start + 1 };
-  }, [buffer, selection, cursorPosition]);
+  })();
 
   // Decode bytes from buffer into all field values
-  const decoded = useMemo(() => {
+  const decoded = (() => {
     if (!buffer || !selRange) return null;
     const { start, end, count } = selRange;
 
@@ -172,8 +172,7 @@ export function Inspector({}: InspectorProps) {
       xorSum: toHex(xorSum, 2),
       sum16: toHex(sum16, 4),
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buffer, selRange, renderKey]);
+  })();
 
   // Sync decoded values into field states (unless user is actively editing that field)
   useEffect(() => {
@@ -197,84 +196,84 @@ export function Inspector({}: InspectorProps) {
       }
       return next;
     });
-  }, [decoded]);
+  }, [buffer, cursorPosition, selection.start, selection.end, renderKey]);
 
   // Write hex bytes to buffer at selection start
-  const writeToBuffer = useCallback((hexStr: string) => {
+  const writeToBuffer = (hexStr: string) => {
     if (!buffer || !selRange) return;
     buffer.pasteSequence(hexStr, selRange.start);
     setModified(true);
     // Bump renderKey to repaint hex view
     useHexEditorStore.setState((s) => ({ renderKey: s.renderKey + 1 }));
-  }, [buffer, selRange, setModified]);
+  };
 
   // --- Encode functions (one per field, mirroring Angular) ---
 
-  const encodeHexNormal = useCallback((text: string) => {
+  const encodeHexNormal = (text: string) => {
     const clean = text.replace(/[^0-9a-fA-F]/g, '');
     if (!selRange || !validateHexValue(clean, selRange.count)) return false;
     writeToBuffer(alignToLength(clean, selRange.count * 2));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
-  const encodeHexNormalInv = useCallback((text: string) => {
+  const encodeHexNormalInv = (text: string) => {
     const clean = text.replace(/[^0-9a-fA-F]/g, '');
     if (!selRange || !validateHexValue(clean, selRange.count)) return false;
     const padded = alignToLength(clean, selRange.count * 2);
     writeToBuffer(hexInvert(padded));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
-  const encodeDecNormal = useCallback((text: string) => {
+  const encodeDecNormal = (text: string) => {
     const clean = text.replace(/[^\-0-9]/g, '');
     if (!selRange || !validateDecValue(clean, selRange.count)) return false;
     const val = parseInt(clean, 10);
     writeToBuffer(hexEncode(val, selRange.count));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
-  const encodeDecNormalInv = useCallback((text: string) => {
+  const encodeDecNormalInv = (text: string) => {
     const clean = text.replace(/[^\-0-9]/g, '');
     if (!selRange || !validateDecValue(clean, selRange.count)) return false;
     const val = parseInt(clean, 10);
     writeToBuffer(hexInvert(hexEncode(val, selRange.count)));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
-  const encodeHexReverse = useCallback((text: string) => {
+  const encodeHexReverse = (text: string) => {
     const clean = text.replace(/[^0-9a-fA-F]/g, '');
     if (!selRange || !validateHexValue(clean, selRange.count)) return false;
     const padded = alignToLength(clean, selRange.count * 2);
     writeToBuffer(reverseByteString(padded));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
-  const encodeHexReverseInv = useCallback((text: string) => {
+  const encodeHexReverseInv = (text: string) => {
     const clean = text.replace(/[^0-9a-fA-F]/g, '');
     if (!selRange || !validateHexValue(clean, selRange.count)) return false;
     const padded = alignToLength(clean, selRange.count * 2);
     writeToBuffer(hexInvert(reverseByteString(padded)));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
-  const encodeDecReverse = useCallback((text: string) => {
+  const encodeDecReverse = (text: string) => {
     const clean = text.replace(/[^\-0-9]/g, '');
     if (!selRange || !validateDecValue(clean, selRange.count)) return false;
     const val = parseInt(clean, 10);
     writeToBuffer(reverseByteString(hexEncode(val, selRange.count)));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
-  const encodeDecReverseInv = useCallback((text: string) => {
+  const encodeDecReverseInv = (text: string) => {
     const clean = text.replace(/[^\-0-9]/g, '');
     if (!selRange || !validateDecValue(clean, selRange.count)) return false;
     const val = parseInt(clean, 10);
     writeToBuffer(hexInvert(reverseByteString(hexEncode(val, selRange.count))));
     return true;
-  }, [selRange, writeToBuffer]);
+  };
 
   // Map field IDs to their encoder
-  const encoders = useMemo(() => ({
+  const encoders: Record<FieldId, (text: string) => boolean> = {
     hexNormal: encodeHexNormal,
     hexNormalInv: encodeHexNormalInv,
     decNormal: encodeDecNormal,
@@ -283,12 +282,9 @@ export function Inspector({}: InspectorProps) {
     hexReverseInv: encodeHexReverseInv,
     decReverse: encodeDecReverse,
     decReverseInv: encodeDecReverseInv,
-  }), [
-    encodeHexNormal, encodeHexNormalInv, encodeDecNormal, encodeDecNormalInv,
-    encodeHexReverse, encodeHexReverseInv, encodeDecReverse, encodeDecReverseInv,
-  ]);
+  };
 
-  const handleChange = useCallback((fieldId: FieldId, text: string) => {
+  const handleChange = (fieldId: FieldId, text: string) => {
     editingFieldRef.current = fieldId;
     const encoder = encoders[fieldId];
     const ok = encoder(text);
@@ -296,26 +292,26 @@ export function Inspector({}: InspectorProps) {
       ...prev,
       [fieldId]: { value: text, error: !ok, editing: true },
     }));
-  }, [encoders]);
+  };
 
-  const handleFocus = useCallback((fieldId: FieldId) => {
+  const handleFocus = (fieldId: FieldId) => {
     editingFieldRef.current = fieldId;
     setFields((prev) => ({
       ...prev,
       [fieldId]: { ...prev[fieldId], editing: true },
     }));
-  }, []);
+  };
 
-  const handleBlur = useCallback((_fieldId: FieldId) => {
+  const handleBlur = (_fieldId: FieldId) => {
     editingFieldRef.current = null;
-  }, []);
+  };
 
   // Header text
-  const headerText = useMemo(() => {
+  const headerText = (() => {
     if (!decoded) return 'No selection';
     if (decoded.count === 1) return `Byte at 0x${toHex(decoded.start, 8)}`;
     return `Bytes 0x${toHex(decoded.start, 8)} - 0x${toHex(decoded.end, 8)} (${decoded.count} bytes)`;
-  }, [decoded]);
+  })();
 
   if (!buffer) {
     return (

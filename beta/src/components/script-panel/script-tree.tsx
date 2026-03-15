@@ -2,7 +2,7 @@
  * Script Tree - hierarchical tree view for script library with folders.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { ScriptNode, getChildren } from './script-storage';
 
@@ -141,38 +141,37 @@ function TreeNode({
 
   const isFolder = node.type === 'folder';
   const isActive = node.id === activeScriptId;
-  const hasChildren = getChildren(nodes, node.id).length > 0;
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     if (isFolder) {
       setExpanded(prev => !prev);
     } else {
       onSelectScript(node);
     }
-  }, [isFolder, node, onSelectScript]);
+  };
 
-  const handleContextMenu = useCallback(() => {
+  const handleContextMenu = () => {
     setShowContextMenu(prev => !prev);
-  }, []);
+  };
 
-  const handleRenameSubmit = useCallback(() => {
+  const handleRenameSubmit = () => {
     const trimmed = renameValue.trim();
     if (trimmed && trimmed !== node.name) {
       onRenameNode(node.id, trimmed);
     }
     setIsRenaming(false);
-  }, [renameValue, node.id, node.name, onRenameNode]);
+  };
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     setShowContextMenu(false);
     onDeleteNode(node.id);
-  }, [node.id, onDeleteNode]);
+  };
 
-  const handleStartRename = useCallback(() => {
+  const handleStartRename = () => {
     setShowContextMenu(false);
     setRenameValue(node.name);
     setIsRenaming(true);
-  }, [node.name]);
+  };
 
   return (
     <View>

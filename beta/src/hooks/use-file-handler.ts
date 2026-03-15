@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import { Platform } from 'react-native';
 import { BinaryBuffer } from '../utils/binbuf';
@@ -7,7 +6,7 @@ import { useHexEditorStore } from '../contexts/hex-editor-store';
 export function useFileHandler() {
   const { setBuffer, clearBuffer, buffer, fileName, isModified } = useHexEditorStore();
 
-  const openFile = useCallback(async () => {
+  const openFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
@@ -19,7 +18,7 @@ export function useFileHandler() {
       }
 
       const file = result.assets[0];
-      
+
       // Use fetch API which works on both web and native
       const response = await fetch(file.uri);
       const arrayBuffer = await response.arrayBuffer();
@@ -30,9 +29,9 @@ export function useFileHandler() {
       console.error('Error opening file:', error);
       throw error;
     }
-  }, [setBuffer]);
+  };
 
-  const saveFile = useCallback(async (customFileName?: string) => {
+  const saveFile = async (customFileName?: string) => {
     if (!buffer) {
       throw new Error('No buffer to save');
     }
@@ -60,17 +59,17 @@ export function useFileHandler() {
     }
 
     return { name, size: buffer.length };
-  }, [buffer, fileName]);
+  };
 
-  const createNewFile = useCallback((size: number = 256) => {
+  const createNewFile = (size: number = 256) => {
     const newBuffer = new BinaryBuffer(new Uint8Array(size));
     setBuffer(newBuffer, 'untitled.bin');
     return { name: 'untitled.bin', size };
-  }, [setBuffer]);
+  };
 
-  const closeFile = useCallback(() => {
+  const closeFile = () => {
     clearBuffer();
-  }, [clearBuffer]);
+  };
 
   return {
     openFile,
