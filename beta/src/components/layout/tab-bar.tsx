@@ -26,9 +26,9 @@ function useTabContextMenu(
 
     const handlers: Array<{ el: HTMLElement; handler: (e: MouseEvent) => void }> = [];
 
-    for (let i = 0; i < tabCount; i++) {
+    Array.from({ length: tabCount }, (_, i) => {
       const el = tabRefs.current[i];
-      if (!el) continue;
+      if (!el) return;
       const handler = (e: MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -37,7 +37,7 @@ function useTabContextMenu(
       };
       el.addEventListener('contextmenu', handler);
       handlers.push({ el, handler });
-    }
+    });
 
     return () => {
       for (const { el, handler } of handlers) {

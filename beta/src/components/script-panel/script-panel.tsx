@@ -72,6 +72,7 @@ interface ScriptPanelProps {
 }
 
 export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
+  'use no memo'
   const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [output, setOutput] = useState<string[]>([]);
@@ -91,13 +92,15 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   const { buffer, cursorPosition, selection } = useHexEditorStore();
 
   // Keep ref in sync
-  activeScriptRef.current = activeScript;
+  useEffect(() => {
+    activeScriptRef.current = activeScript;
+  }, [activeScript]);
 
-  // Build CodeMirror extensions (stable reference)
-  const extensionsRef = useRef<ReturnType<typeof buildExtensions> | null>(null);
-  if (!extensionsRef.current) {
-    extensionsRef.current = buildExtensions(() => {
-      // Auto-save on change - debounced
+  // Auto-save callback ref — called by CodeMirror on doc change.
+  // Using a ref so the extensions array (built once) always calls the latest closure.
+  const onChangeRef = useRef(() => {});
+  useEffect(() => {
+    onChangeRef.current = () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
         const script = activeScriptRef.current;
@@ -107,8 +110,13 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
           setScriptNodes((prev) => updateScriptCode(prev, script.id, code));
         }
       }, 500);
-    });
-  }
+    };
+  });
+
+  // Build CodeMirror extensions (stable reference, built once)
+  const [extensions] = useState(() =>
+    buildExtensions(() => onChangeRef.current()),
+  );
 
   // Ref callback: create/destroy CodeMirror when the div mounts/unmounts.
   // Using key={activeScript.id} on the div ensures this runs on each script switch.
@@ -123,7 +131,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     const code = activeScriptRef.current?.code ?? "";
     const state = EditorState.create({
       doc: code,
-      extensions: extensionsRef.current!,
+      extensions,
     });
     const view = new EditorView({ state, parent: el });
     viewRef.current = view;
