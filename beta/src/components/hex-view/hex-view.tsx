@@ -488,8 +488,13 @@ export function HexView({
   );
 
   // Wheel handler for scrolling
-  const handleWheel = useCallback(
-    (event: React.WheelEvent) => {
+  // Attach wheel listener with { passive: false } to allow preventDefault
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onWheel = (event: WheelEvent) => {
       if (!buffer) return;
       event.preventDefault();
 
@@ -498,9 +503,11 @@ export function HexView({
       const newOffset = Math.max(0, Math.min(maxOffset, scrollOffset + delta));
 
       setScrollOffset(newOffset);
-    },
-    [buffer, bytesPerLine, scrollOffset, setScrollOffset, metrics.visibleRows]
-  );
+    };
+
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [buffer, bytesPerLine, scrollOffset, setScrollOffset, metrics.visibleRows]);
 
   // Focus handlers
   const handleFocus = useCallback(() => setFocused(true), []);
@@ -776,7 +783,6 @@ export function HexView({
         onMouseDown={(e) => handleMouseEvent(e, 'down')}
         onMouseUp={(e) => handleMouseEvent(e, 'up')}
         onMouseMove={(e) => handleMouseEvent(e, 'move')}
-        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
       />
       <canvas
