@@ -91,6 +91,8 @@ export function HexView({
     clearMarkers,
     swapBytes,
     fillSelection,
+    getColorBuffer,
+    masterTabId,
   } = useHexEditorStore();
 
   // Calculate layout metrics
@@ -162,11 +164,13 @@ export function HexView({
         return '#999999';
       }
 
-      // Then colors from buffer
-      const colorCode = buffer.getColor?.(index) ?? 0;
+      // Then colors from buffer (use master tab's buffer if set)
+      const colorBuf = getColorBuffer() ?? buffer;
+      const colorCode = colorBuf.getColor?.(index) ?? 0;
       return COLOR_MAP[colorCode] || COLOR_MAP[0];
     },
-    [buffer, selection]
+    // masterTabId ensures callback is recreated when master tab changes
+    [buffer, selection, getColorBuffer, masterTabId]
   );
 
   // Check if byte is marked (modified)

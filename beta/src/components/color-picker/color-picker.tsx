@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
+import { useLocale } from '../../locales';
 
 // Color palette matching the Angular version
 const COLORS = [
@@ -24,44 +25,71 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ onColorSelect }: ColorPickerProps) {
-  const { buffer, selection, cursorPosition } = useHexEditorStore();
+  const { buffer, selection, cursorPosition, masterTabId, tabs, activeTabIndex, setMasterTab, getColorBuffer } = useHexEditorStore();
+  const { t } = useLocale();
+
+  const isMaster = masterTabId != null && tabs[activeTabIndex]?.id === masterTabId;
 
   const handleColorSelect = (colorId: number) => {
     if (!buffer) return;
 
+    const colorBuffer = getColorBuffer() ?? buffer;
     const start = Math.min(selection.start, selection.end);
     const end = Math.max(selection.start, selection.end);
 
     // If no selection, color just the current cursor position
     if (start === end) {
-      buffer.setColor(cursorPosition, colorId);
+      colorBuffer.setColor(cursorPosition, colorId);
     } else {
       // Color the selected range
-      for (let i = start; i <= end && i < buffer.length; i++) {
-        buffer.setColor(i, colorId);
+      for (let i = start; i <= end && i < colorBuffer.length; i++) {
+        colorBuffer.setColor(i, colorId);
       }
     }
 
     onColorSelect?.(colorId);
   };
 
+  const handleToggleMaster = () => {
+    setMasterTab(!isMaster);
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.colorGrid}>
-        {COLORS.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[
-              styles.colorButton,
-              { backgroundColor: item.color },
-              item.id === 0 && styles.whiteButton,
-            ]}
-            onPress={() => handleColorSelect(item.id)}
-            accessibilityLabel={item.name}
-          >
-            {item.id === 0 && <Text style={styles.clearText}>✕</Text>}
+      <View style={styles.row}>
+        <View style={styles.colorGrid}>
+          {COLORS.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.colorButton,
+                { backgroundColor: item.color },
+                item.id === 0 && styles.whiteButton,
+              ]}
+              onPress={() => handleColorSelect(item.id)}
+              accessibilityLabel={item.name}
+            >
+              {item.id === 0 && <Text style={styles.clearText}>✕</Text>}
+            </TouchableOpacity>
+          ))}
+        </View>
+        {tabs.length > 1 && (
+          <TouchableOpacity style={styles.applyAll} onPress={handleToggleMaster}>
+            {Platform.OS === 'web' ? (
+              <input
+                type="checkbox"
+                checked={isMaster}
+                onChange={handleToggleMaster}
+                style={{ marginRight: 6 }}
+              />
+            ) : (
+              <View style={[styles.checkbox, isMaster && styles.checkboxChecked]}>
+                {isMaster && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+            )}
+            <Text style={styles.applyAllText}>{t('apply')}</Text>
           </TouchableOpacity>
-        ))}
+        )}
       </View>
     </View>
   );
@@ -71,6 +99,10 @@ const styles = StyleSheet.create({
   container: {
     padding: 8,
     backgroundColor: '#f8f9fa',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontSize: 13,
@@ -82,6 +114,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  applyAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 16,
+  },
+  applyAllText: {
+    fontSize: 12,
+    color: '#495057',
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderColor: '#6c757d',
+    borderRadius: 2,
+    marginRight: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#007bff',
+    borderColor: '#007bff',
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   colorButton: {
     width: 32,

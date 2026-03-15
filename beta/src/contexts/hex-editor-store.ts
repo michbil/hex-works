@@ -37,6 +37,9 @@ export interface HexEditorState {
   tabs: Tab[];
   activeTabIndex: number;
 
+  // Master tab: when set, color operations use the master tab's buffer
+  masterTabId: string | null;
+
   // Derived from active tab (for backward compatibility)
   buffer: BinaryBuffer | null;
   fileName: string | null;
@@ -74,6 +77,10 @@ export interface HexEditorState {
   clearMarkers: () => void;
   swapBytes: () => void;
   fillSelection: (sequence: number[], xor?: boolean) => void;
+
+  // Master tab actions
+  setMasterTab: (enabled: boolean) => void;
+  getColorBuffer: () => BinaryBuffer | null;
 }
 
 function deriveFromTab(tab: Tab | undefined) {
@@ -122,6 +129,7 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
   // Initial state
   tabs: [],
   activeTabIndex: -1,
+  masterTabId: null,
   buffer: null,
   fileName: null,
   isModified: false,
@@ -151,12 +159,15 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
     const state = get();
     const tabs = saveActiveTab(state);
     if (index < 0 || index >= tabs.length) return;
+    const removedId = tabs[index].id;
     const newTabs = tabs.filter((_, i) => i !== index);
+    const masterTabId = state.masterTabId === removedId ? null : state.masterTabId;
     let newIndex = state.activeTabIndex;
     if (newTabs.length === 0) {
       set({
         tabs: [],
         activeTabIndex: -1,
+        masterTabId: null,
         ...deriveFromTab(undefined),
       });
       return;
@@ -169,6 +180,7 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
     set({
       tabs: newTabs,
       activeTabIndex: newIndex,
+      masterTabId,
       ...deriveFromTab(newTabs[newIndex]),
     });
   },
@@ -282,6 +294,25 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
     const end = selStart === selEnd ? buffer.length - 1 : selEnd;
     buffer.fillWithSequence(start, end, sequence, xor);
     set({ isModified: true, renderKey: get().renderKey + 1 });
+  },
+
+  setMasterTab: (enabled: boolean) => {
+    const state = get();
+    if (enabled && state.buffer) {
+      set({ masterTabId: state.tabs[state.activeTabIndex]?.id ?? null });
+    } else {
+      set({ masterTabId: null });
+    }
+    set({ renderKey: get().renderKey + 1 });
+  },
+
+  getColorBuffer: () => {
+    const state = get();
+    if (state.masterTabId) {
+      const masterTab = state.tabs.find(t => t.id === state.masterTabId);
+      if (masterTab) return masterTab.buffer;
+    }
+    return state.buffer;
   },
 }));
 
