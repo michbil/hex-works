@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { createPortal } from 'react-dom';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
@@ -17,9 +17,9 @@ function useTabContextMenu(
   const [menu, setMenu] = useState<ContextMenu | null>(null);
   const tabRefs = useRef<(HTMLElement | null)[]>([]);
 
-  const setTabRef = useCallback((index: number, el: HTMLElement | null) => {
+  const setTabRef = (index: number, el: HTMLElement | null) => {
     tabRefs.current[index] = el;
-  }, []);
+  };
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -94,36 +94,33 @@ export function TabBar() {
   const [resizeValue, setResizeValue] = useState('');
   const resizeInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCompare = useCallback(
-    (targetIndex: number) => {
-      compareToTab(targetIndex);
-      setMenu(null);
-    },
-    [compareToTab, setMenu]
-  );
+  const handleCompare = (targetIndex: number) => {
+    compareToTab(targetIndex);
+    setMenu(null);
+  };
 
-  const handleResizeClick = useCallback(() => {
+  const handleResizeClick = () => {
     setResizeValue(buffer ? String(buffer.length) : '256');
     setShowResize(true);
-  }, [buffer]);
+  };
 
-  const handleResizeSubmit = useCallback(() => {
+  const handleResizeSubmit = () => {
     const size = parseInt(resizeValue, 10);
     if (!isNaN(size) && size > 0) {
       resizeBuffer(size);
     }
     setShowResize(false);
     setMenu(null);
-  }, [resizeValue, resizeBuffer, setMenu]);
+  };
 
-  const handleResizeKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleResizeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleResizeSubmit();
     } else if (e.key === 'Escape') {
       setShowResize(false);
       setMenu(null);
     }
-  }, [handleResizeSubmit, setMenu]);
+  };
 
   // Auto-focus the resize input when it appears
   useEffect(() => {

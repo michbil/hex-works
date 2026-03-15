@@ -4,7 +4,7 @@
  * Scripts are persisted to localStorage with hierarchical folder support.
  */
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -112,7 +112,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
 
   // Ref callback: create/destroy CodeMirror when the div mounts/unmounts.
   // Using key={activeScript.id} on the div ensures this runs on each script switch.
-  const editorRefCallback = useCallback((el: HTMLDivElement | null) => {
+  const editorRefCallback = (el: HTMLDivElement | null) => {
     if (viewRef.current) {
       viewRef.current.destroy();
       viewRef.current = null;
@@ -129,7 +129,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     viewRef.current = view;
     // Focus the editor so it's immediately typeable
     view.focus();
-  }, []);
+  };
 
   // Cleanup auto-save timer
   useEffect(() => {
@@ -140,7 +140,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
 
   // --- Script library actions ---
 
-  const handleSelectScript = useCallback((script: ScriptNode) => {
+  const handleSelectScript = (script: ScriptNode) => {
     // Flush pending save before switching
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
@@ -153,9 +153,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       }
     }
     setActiveScript(script);
-  }, []);
+  };
 
-  const handleCreateScript = useCallback((parentId: string | null) => {
+  const handleCreateScript = (parentId: string | null) => {
     setScriptNodes((prev) => {
       const result = createScript(
         prev,
@@ -166,16 +166,16 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       setActiveScript(result.script);
       return result.nodes;
     });
-  }, []);
+  };
 
-  const handleCreateFolder = useCallback((parentId: string | null) => {
+  const handleCreateFolder = (parentId: string | null) => {
     setScriptNodes((prev) => {
       const result = createFolder(prev, "New Folder", parentId);
       return result.nodes;
     });
-  }, []);
+  };
 
-  const handleDeleteNode = useCallback((id: string) => {
+  const handleDeleteNode = (id: string) => {
     setScriptNodes((prev) => {
       const updated = deleteNode(prev, id);
       // If deleted the active script, clear editor
@@ -184,9 +184,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       }
       return updated;
     });
-  }, []);
+  };
 
-  const handleRenameNode = useCallback((id: string, name: string) => {
+  const handleRenameNode = (id: string, name: string) => {
     setScriptNodes((prev) => {
       const updated = renameNode(prev, id, name);
       // Update active script reference if it was renamed
@@ -196,62 +196,56 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       }
       return updated;
     });
-  }, []);
+  };
 
   // --- Run/Clear ---
 
-  const appendResult = useCallback(
-    (label: string, result: ScriptResult) => {
-      setLastResult(result);
-      setExportedActions(result.exportedActions);
-      setOutput((prev) => {
-        const newOutput = [
-          ...prev,
-          `--- ${label} (${result.duration.toFixed(1)}ms) ---`,
-          ...result.output,
-        ];
-        if (result.error) {
-          newOutput.push(`[ERROR] ${result.error}`);
-        }
-        return newOutput;
-      });
-      onBufferModified();
-      setTimeout(() => {
-        outputScrollRef.current?.scrollToEnd?.({ animated: true });
-      }, 50);
-    },
-    [onBufferModified],
-  );
+  const appendResult = (label: string, result: ScriptResult) => {
+    setLastResult(result);
+    setExportedActions(result.exportedActions);
+    setOutput((prev) => {
+      const newOutput = [
+        ...prev,
+        `--- ${label} (${result.duration.toFixed(1)}ms) ---`,
+        ...result.output,
+      ];
+      if (result.error) {
+        newOutput.push(`[ERROR] ${result.error}`);
+      }
+      return newOutput;
+    });
+    onBufferModified();
+    setTimeout(() => {
+      outputScrollRef.current?.scrollToEnd?.({ animated: true });
+    }, 50);
+  };
 
-  const handleRun = useCallback(() => {
+  const handleRun = () => {
     if (!viewRef.current || !buffer) return;
     const code = viewRef.current.state.doc.toString();
     const result = executeScript(code, { buffer, cursorPosition, selection });
     const label = activeScript ? `Run [${activeScript.name}]` : "Run";
     appendResult(label, result);
-  }, [buffer, cursorPosition, selection, activeScript, appendResult]);
+  };
 
-  const handleRunAction = useCallback(
-    (actionName: string) => {
-      if (!viewRef.current || !buffer) return;
-      const code = viewRef.current.state.doc.toString();
-      const result = executeAction(code, actionName, {
-        buffer,
-        cursorPosition,
-        selection,
-      });
-      const label = activeScript
-        ? `${activeScript.name} \u2192 ${actionName}`
-        : actionName;
-      appendResult(label, result);
-    },
-    [buffer, cursorPosition, selection, activeScript, appendResult],
-  );
+  const handleRunAction = (actionName: string) => {
+    if (!viewRef.current || !buffer) return;
+    const code = viewRef.current.state.doc.toString();
+    const result = executeAction(code, actionName, {
+      buffer,
+      cursorPosition,
+      selection,
+    });
+    const label = activeScript
+      ? `${activeScript.name} \u2192 ${actionName}`
+      : actionName;
+    appendResult(label, result);
+  };
 
-  const handleClear = useCallback(() => {
+  const handleClear = () => {
     setOutput([]);
     setLastResult(null);
-  }, []);
+  };
 
   if (Platform.OS !== "web") {
     return (
