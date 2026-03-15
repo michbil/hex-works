@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -60,13 +60,15 @@ jobs:
           sed -i 's|src="/_expo/|src="_expo/|g' ./dist/beta/index.html
           sed -i 's|href="/_expo/|href="_expo/|g' ./dist/beta/index.html
           sed -i 's|href="/favicon|href="favicon|g' ./dist/beta/index.html
+          # Inject Google Analytics
+          sed -i 's|</head>|<!-- Google tag (gtag.js) --><script async src="https://www.googletagmanager.com/gtag/js?id=G-J99PMLML6S"></script><script>window.dataLayer=window.dataLayer\|\|[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-J99PMLML6S");</script>\n</head>|' ./dist/beta/index.html
 
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v5
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: "./dist/"
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4

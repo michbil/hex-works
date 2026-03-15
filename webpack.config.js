@@ -2,6 +2,10 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 
+const GA_SNIPPET = `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-J99PMLML6S"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-J99PMLML6S');</script>`;
+
 module.exports = {
     entry: [
         './views/material/js/ripples.min.js',
@@ -48,7 +52,8 @@ module.exports = {
                                 return content.toString()
                                     .replace(/src="\/_expo\//g, 'src="_expo/')
                                     .replace(/href="\/_expo\//g, 'href="_expo/')
-                                    .replace(/href="\/favicon/g, 'href="favicon');
+                                    .replace(/href="\/favicon/g, 'href="favicon')
+                                    .replace('</head>', GA_SNIPPET + '\n</head>');
                             }
                             return content;
                         }
