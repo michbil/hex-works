@@ -18,6 +18,7 @@ import { searchBytes } from '../../utils/helpers';
 
 interface SearchPanelProps {
   onClose?: () => void;
+  bytesPerLine: number;
 }
 
 type SearchMode = 'hex' | 'text';
@@ -31,8 +32,8 @@ function toHexAddr(n: number): string {
   return '0x' + n.toString(16).toUpperCase().padStart(8, '0');
 }
 
-export function SearchPanel({ onClose }: SearchPanelProps) {
-  const { buffer, setCursorPosition, setSelection, setScrollOffset, bytesPerLine } =
+export function SearchPanel({ onClose, bytesPerLine }: SearchPanelProps) {
+  const { buffer, setCursorPosition, setSelection, setScrollOffset } =
     useHexEditorStore();
 
   const [searchQuery, setSearchQuery] = useState('');

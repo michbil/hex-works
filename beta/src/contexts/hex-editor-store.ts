@@ -1,3 +1,4 @@
+'use no memo';
 import { create } from 'zustand';
 import { BinaryBuffer } from '../utils/binbuf';
 
@@ -44,7 +45,6 @@ export interface HexEditorState {
   buffer: BinaryBuffer | null;
   fileName: string | null;
   isModified: boolean;
-  bytesPerLine: number;
   scrollOffset: number;
   cursorPosition: number;
   selection: Selection;
@@ -68,7 +68,6 @@ export interface HexEditorState {
   setCursorPosition: (position: number) => void;
   setSelection: (start: number, end: number) => void;
   setScrollOffset: (offset: number) => void;
-  setBytesPerLine: (count: number) => void;
   setIsEditing: (editing: boolean) => void;
   setEditNibble: (nibble: 'high' | 'low') => void;
   setByte: (offset: number, value: number) => void;
@@ -133,7 +132,6 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
   buffer: null,
   fileName: null,
   isModified: false,
-  bytesPerLine: 16,
   scrollOffset: 0,
   cursorPosition: 0,
   selection: { start: 0, end: 0 },
@@ -239,8 +237,6 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
     set({ selection: { start, end } }),
 
   setScrollOffset: (offset: number) => set({ scrollOffset: offset }),
-
-  setBytesPerLine: (count: number) => set({ bytesPerLine: count }),
 
   setIsEditing: (editing: boolean) =>
     set({ isEditing: editing, editNibble: 'high' }),

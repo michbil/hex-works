@@ -7,9 +7,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
 import { useLocale } from '../../locales';
 
-export function StatusBar() {
+export function StatusBar({bytesPerLine}: {bytesPerLine: number}) {
   const { t } = useLocale();
-  const { buffer, cursorPosition, selection, isEditing, bytesPerLine } = useHexEditorStore();
+  const { buffer, cursorPosition, selection, isEditing } = useHexEditorStore();
 
   if (!buffer) {
     return (

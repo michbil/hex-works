@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text, Platform, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Platform, Modal, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
 import { LocaleProvider } from './src/locales';
 import { usePersistence } from './src/hooks/use-persistence';
@@ -36,6 +36,9 @@ function HexEditorApp() {
     setRefreshKey((prev) => prev + 1);
   }, []);
 
+  const dimensions = useWindowDimensions()
+  const bytesPerLine = dimensions.width < 700 ? 8 : 16;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -49,7 +52,7 @@ function HexEditorApp() {
         {/* Hex View - fixed width */}
         <View style={styles.hexViewContainer}>
           <ColorPicker onColorSelect={handleColorSelect} />
-          <HexView key={refreshKey} />
+          <HexView key={refreshKey} bytesPerLine={bytesPerLine} />
         </View>
 
         {/* Right Panel with tabs */}
@@ -90,7 +93,7 @@ function HexEditorApp() {
           )}
           {rightTab === 'search' && (
             <View testID="search-panel" style={{flex: 1}}>
-              <SearchPanel onClose={() => setRightTab('inspector')} />
+              <SearchPanel onClose={() => setRightTab('inspector')} bytesPerLine={bytesPerLine}/>
             </View>
           )}
           {rightTab === 'script' && (
@@ -105,7 +108,7 @@ function HexEditorApp() {
       </View>
 
       {/* Status Bar */}
-      <AppStatusBar />
+      <AppStatusBar bytesPerLine={bytesPerLine}/>
 
       {/* Help Modal */}
       <Modal
