@@ -185,12 +185,12 @@ export function HexView({
   const getScrollbarParams = useCallback(() => {
     if (!buffer) return null;
     const totalBytes = buffer.length;
-    const visibleBytes = metrics.visibleRows * bytesPerLine;
-    if (totalBytes <= visibleBytes) return null; // No scrollbar needed
+    const totalLines = Math.ceil(totalBytes / bytesPerLine);
+    if (totalLines <= metrics.visibleRows) return null; // No scrollbar needed
 
-    const maxOffset = Math.max(0, Math.floor((totalBytes - visibleBytes) / bytesPerLine) * bytesPerLine);
+    const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
     const canvasHeight = dimensions.height;
-    let gripHeight = canvasHeight * visibleBytes / totalBytes;
+    let gripHeight = canvasHeight * metrics.visibleRows / totalLines;
     if (gripHeight < 30) gripHeight = 30; // Minimum grip height
 
     const gripTop = maxOffset > 0
@@ -203,9 +203,8 @@ export function HexView({
   // Reverse-compute: pixel Y → buffer offset (for scrollbar drag)
   const reverseScrollCompute = useCallback((y: number) => {
     if (!buffer) return 0;
-    const totalBytes = buffer.length;
-    const visibleBytes = metrics.visibleRows * bytesPerLine;
-    const maxOffset = Math.max(0, Math.floor((totalBytes - visibleBytes) / bytesPerLine) * bytesPerLine);
+    const totalLines = Math.ceil(buffer.length / bytesPerLine);
+    const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
     const params = scrollbarParamsRef.current;
     if (!params) return 0;
 
@@ -499,7 +498,8 @@ export function HexView({
       event.preventDefault();
 
       const delta = Math.sign(event.deltaY) * bytesPerLine * 3;
-      const maxOffset = Math.max(0, buffer.length - metrics.visibleRows * bytesPerLine);
+      const totalLines = Math.ceil(buffer.length / bytesPerLine);
+      const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
       const newOffset = Math.max(0, Math.min(maxOffset, scrollOffset + delta));
 
       setScrollOffset(newOffset);
