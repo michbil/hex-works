@@ -1,20 +1,53 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Text, Platform, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
+import { Drawer } from './src/components/layout';
+import { FileMenu } from './src/components/layout/header';
 import { LocaleProvider } from './src/locales';
 import { usePersistence } from './src/hooks/use-persistence';
 import { useDropFile } from './src/hooks/use-drop-file';
+import { useMobile } from './src/hooks/use-mobile';
 
 type RightPanelTab = 'inspector' | 'search' | 'script';
 
 function HexEditorApp() {
   usePersistence();
   useDropFile();
+  const { isMobile } = useMobile();
+
+  // Inject mobile-specific CSS to prevent iOS overscroll bounce and pinch zoom
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isMobile) return;
+    const style = document.createElement('style');
+    style.textContent = `
+      html, body, #root {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        overscroll-behavior: none;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Ensure viewport meta prevents zoom
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+      meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+    }
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [isMobile]);
 
   const [showHelp, setShowHelp] = useState(false);
   const [rightTab, setRightTab] = useState<RightPanelTab>('inspector');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
   const handleSearchPress = useCallback(() => {
     setRightTab(prev => prev === 'search' ? 'inspector' : 'search');
@@ -36,76 +69,105 @@ function HexEditorApp() {
     setRefreshKey((prev) => prev + 1);
   }, []);
 
+  const rightPanelContent = (
+    <>
+      {/* Tab bar */}
+      <View style={styles.panelTabBar} testID="panel-tab-bar">
+        <TouchableOpacity
+          style={[styles.panelTab, rightTab === 'inspector' && styles.panelTabActive]}
+          onPress={() => setRightTab('inspector')}
+        >
+          <Text style={[styles.panelTabText, rightTab === 'inspector' && styles.panelTabTextActive]}>
+            Inspector
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.panelTab, rightTab === 'search' && styles.panelTabActive]}
+          onPress={() => setRightTab('search')}
+        >
+          <Text style={[styles.panelTabText, rightTab === 'search' && styles.panelTabTextActive]}>
+            Search
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.panelTab, rightTab === 'script' && styles.panelTabActive]}
+          onPress={() => setRightTab('script')}
+        >
+          <Text style={[styles.panelTabText, rightTab === 'script' && styles.panelTabTextActive]}>
+            Script
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tab content */}
+      {rightTab === 'inspector' && (
+        <ScrollView style={styles.inspectorContent} testID="inspector-panel">
+          <Inspector />
+        </ScrollView>
+      )}
+      {rightTab === 'search' && (
+        <View testID="search-panel" style={{flex: 1}}>
+          <SearchPanel onClose={() => setRightTab('inspector')} />
+        </View>
+      )}
+      {rightTab === 'script' && (
+        <View testID="script-panel" style={{flex: 1}}>
+          <ScriptPanel
+            onClose={() => setRightTab('inspector')}
+            onBufferModified={handleBufferModified}
+          />
+        </View>
+      )}
+    </>
+  );
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Header onSearchPress={handleSearchPress} onScriptPress={handleScriptPress} onHelpPress={handleHelpPress} />
+      <Header
+        onSearchPress={handleSearchPress}
+        onScriptPress={handleScriptPress}
+        onHelpPress={handleHelpPress}
+        isMobile={isMobile}
+        onLeftMenuPress={() => setLeftDrawerOpen(true)}
+        onRightMenuPress={() => setRightDrawerOpen(true)}
+      />
 
       {/* Tabs */}
       <TabBar />
 
       {/* Main Content */}
-      <View style={styles.mainContent}>
-        {/* Hex View - fixed width */}
-        <View style={styles.hexViewContainer}>
+      <View style={isMobile ? styles.mainContentMobile : styles.mainContent}>
+        {/* Hex View */}
+        <View style={isMobile ? styles.hexViewContainerMobile : styles.hexViewContainer}>
           <ColorPicker onColorSelect={handleColorSelect} />
-          <HexView key={refreshKey} />
+          <HexView key={refreshKey} isMobile={isMobile} />
         </View>
 
-        {/* Right Panel with tabs */}
-        <View style={styles.rightPanel}>
-          {/* Tab bar */}
-          <View style={styles.panelTabBar} testID="panel-tab-bar">
-            <TouchableOpacity
-              style={[styles.panelTab, rightTab === 'inspector' && styles.panelTabActive]}
-              onPress={() => setRightTab('inspector')}
-            >
-              <Text style={[styles.panelTabText, rightTab === 'inspector' && styles.panelTabTextActive]}>
-                Inspector
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.panelTab, rightTab === 'search' && styles.panelTabActive]}
-              onPress={() => setRightTab('search')}
-            >
-              <Text style={[styles.panelTabText, rightTab === 'search' && styles.panelTabTextActive]}>
-                Search
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.panelTab, rightTab === 'script' && styles.panelTabActive]}
-              onPress={() => setRightTab('script')}
-            >
-              <Text style={[styles.panelTabText, rightTab === 'script' && styles.panelTabTextActive]}>
-                Script
-              </Text>
-            </TouchableOpacity>
+        {/* Right Panel — inline on desktop, drawer on mobile */}
+        {!isMobile && (
+          <View style={styles.rightPanel}>
+            {rightPanelContent}
           </View>
-
-          {/* Tab content */}
-          {rightTab === 'inspector' && (
-            <ScrollView style={styles.inspectorContent} testID="inspector-panel">
-              <Inspector />
-            </ScrollView>
-          )}
-          {rightTab === 'search' && (
-            <View testID="search-panel" style={{flex: 1}}>
-              <SearchPanel onClose={() => setRightTab('inspector')} />
-            </View>
-          )}
-          {rightTab === 'script' && (
-            <View testID="script-panel" style={{flex: 1}}>
-              <ScriptPanel
-                onClose={() => setRightTab('inspector')}
-                onBufferModified={handleBufferModified}
-              />
-            </View>
-          )}
-        </View>
+        )}
       </View>
 
       {/* Status Bar */}
       <AppStatusBar />
+
+      {/* Mobile Drawers */}
+      {isMobile && (
+        <>
+          <Drawer visible={leftDrawerOpen} side="left" onClose={() => setLeftDrawerOpen(false)}>
+            <FileMenu onClose={() => setLeftDrawerOpen(false)} onHelpPress={handleHelpPress} />
+          </Drawer>
+          <Drawer visible={rightDrawerOpen} side="right" onClose={() => setRightDrawerOpen(false)}>
+            <View style={styles.rightDrawerContent}>
+              {rightPanelContent}
+            </View>
+          </Drawer>
+        </>
+      )}
 
       {/* Help Modal */}
       <Modal
@@ -169,15 +231,27 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  mainContentMobile: {
+    flex: 1,
+    flexDirection: 'column',
+  },
   hexViewContainer: {
     width: 700,
     flexShrink: 0,
     padding: 8,
   },
+  hexViewContainerMobile: {
+    flex: 1,
+    padding: 4,
+  },
   rightPanel: {
     flex: 1,
     borderLeftWidth: 1,
     borderLeftColor: '#404040',
+    backgroundColor: '#1e1e1e',
+  },
+  rightDrawerContent: {
+    flex: 1,
     backgroundColor: '#1e1e1e',
   },
   panelTabBar: {

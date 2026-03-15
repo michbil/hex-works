@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { createPortal } from 'react-dom';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
+import { useMobile } from '../../hooks/use-mobile';
 
 interface ContextMenu {
   x: number;
@@ -55,7 +56,7 @@ function useTabContextMenu(
     };
   }, [menu]);
 
-  return { menu, setMenu, setTabRef };
+  return { menu, setMenu, setTabRef, tabRefs };
 }
 
 const menuItemStyle: React.CSSProperties = {
@@ -86,8 +87,9 @@ export function TabBar() {
   const compareToTab = useHexEditorStore((s) => s.compareToTab);
   const resizeBuffer = useHexEditorStore((s) => s.resizeBuffer);
   const buffer = useHexEditorStore((s) => s.buffer);
+  const { isMobile } = useMobile();
 
-  const { menu, setMenu, setTabRef } = useTabContextMenu(tabs.length, switchTab);
+  const { menu, setMenu, setTabRef, tabRefs } = useTabContextMenu(tabs.length, switchTab);
   const [showResize, setShowResize] = useState(false);
   const [resizeValue, setResizeValue] = useState('');
   const resizeInputRef = useRef<HTMLInputElement>(null);
@@ -146,8 +148,17 @@ export function TabBar() {
             }}
           >
             <TouchableOpacity
-              style={[styles.tab, index === activeTabIndex && styles.activeTab]}
+              style={[styles.tab, isMobile && styles.tabMobile, index === activeTabIndex && styles.activeTab]}
               onPress={() => switchTab(index)}
+              onLongPress={() => {
+                switchTab(index);
+                const el = tabRefs.current[index];
+                if (el) {
+                  const rect = el.getBoundingClientRect();
+                  setMenu({ x: rect.left, y: rect.bottom, tabIndex: index });
+                }
+              }}
+              delayLongPress={500}
             >
               <Text
                 style={[styles.tabText, index === activeTabIndex && styles.activeTabText]}
@@ -276,6 +287,10 @@ const styles = StyleSheet.create({
     borderRightColor: '#ced4da',
     backgroundColor: '#e9ecef',
     maxWidth: 200,
+  },
+  tabMobile: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   activeTab: {
     backgroundColor: '#f8f9fa',

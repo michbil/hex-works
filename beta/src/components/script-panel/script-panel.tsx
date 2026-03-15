@@ -4,25 +4,38 @@
  * Scripts are persisted to localStorage with hierarchical folder support.
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
-import { EditorState } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
-import { javascript } from '@codemirror/lang-javascript';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Platform,
+} from "react-native";
+import { EditorState } from "@codemirror/state";
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+} from "@codemirror/view";
+import { javascript } from "@codemirror/lang-javascript";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import {
   syntaxHighlighting,
   defaultHighlightStyle,
   bracketMatching,
   foldGutter,
   indentOnInput,
-} from '@codemirror/language';
-import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-import { highlightSelectionMatches } from '@codemirror/search';
-import { useHexEditorStore } from '../../contexts/hex-editor-store';
-import { executeScript, executeAction, ScriptResult } from './script-engine';
-import { ScriptTree } from './script-tree';
+} from "@codemirror/language";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { highlightSelectionMatches } from "@codemirror/search";
+import { useHexEditorStore } from "../../contexts/hex-editor-store";
+import { executeScript, executeAction, ScriptResult } from "./script-engine";
+import { ScriptTree } from "./script-tree";
 import {
   ScriptNode,
   loadScriptNodes,
@@ -32,7 +45,7 @@ import {
   renameNode,
   deleteNode,
   getNodePath,
-} from './script-storage';
+} from "./script-storage";
 
 const DEFAULT_NEW_SCRIPT = `// Available API:
 //   buffer.length, buffer.getByte(offset), buffer.setByte(offset, value)
@@ -67,7 +80,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   const outputScrollRef = useRef<ScrollView>(null);
 
   // Script library state
-  const [scriptNodes, setScriptNodes] = useState<ScriptNode[]>(() => loadScriptNodes());
+  const [scriptNodes, setScriptNodes] = useState<ScriptNode[]>(() =>
+    loadScriptNodes(),
+  );
   const [activeScript, setActiveScript] = useState<ScriptNode | null>(null);
   const [showTree, setShowTree] = useState(true);
   const activeScriptRef = useRef<ScriptNode | null>(null);
@@ -89,7 +104,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         const view = viewRef.current;
         if (script && view) {
           const code = view.state.doc.toString();
-          setScriptNodes(prev => updateScriptCode(prev, script.id, code));
+          setScriptNodes((prev) => updateScriptCode(prev, script.id, code));
         }
       }, 500);
     });
@@ -103,9 +118,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       viewRef.current = null;
     }
     editorRef.current = el;
-    if (!el || Platform.OS !== 'web') return;
+    if (!el || Platform.OS !== "web") return;
 
-    const code = activeScriptRef.current?.code ?? '';
+    const code = activeScriptRef.current?.code ?? "";
     const state = EditorState.create({
       doc: code,
       extensions: extensionsRef.current!,
@@ -134,29 +149,34 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       const view = viewRef.current;
       if (prevScript && view) {
         const code = view.state.doc.toString();
-        setScriptNodes(prev => updateScriptCode(prev, prevScript.id, code));
+        setScriptNodes((prev) => updateScriptCode(prev, prevScript.id, code));
       }
     }
     setActiveScript(script);
   }, []);
 
   const handleCreateScript = useCallback((parentId: string | null) => {
-    setScriptNodes(prev => {
-      const result = createScript(prev, 'New Script', parentId, DEFAULT_NEW_SCRIPT);
+    setScriptNodes((prev) => {
+      const result = createScript(
+        prev,
+        "New Script",
+        parentId,
+        DEFAULT_NEW_SCRIPT,
+      );
       setActiveScript(result.script);
       return result.nodes;
     });
   }, []);
 
   const handleCreateFolder = useCallback((parentId: string | null) => {
-    setScriptNodes(prev => {
-      const result = createFolder(prev, 'New Folder', parentId);
+    setScriptNodes((prev) => {
+      const result = createFolder(prev, "New Folder", parentId);
       return result.nodes;
     });
   }, []);
 
   const handleDeleteNode = useCallback((id: string) => {
-    setScriptNodes(prev => {
+    setScriptNodes((prev) => {
       const updated = deleteNode(prev, id);
       // If deleted the active script, clear editor
       if (activeScriptRef.current?.id === id) {
@@ -167,11 +187,11 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   }, []);
 
   const handleRenameNode = useCallback((id: string, name: string) => {
-    setScriptNodes(prev => {
+    setScriptNodes((prev) => {
       const updated = renameNode(prev, id, name);
       // Update active script reference if it was renamed
       if (activeScriptRef.current?.id === id) {
-        const node = updated.find(n => n.id === id);
+        const node = updated.find((n) => n.id === id);
         if (node) setActiveScript(node);
       }
       return updated;
@@ -180,51 +200,65 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
 
   // --- Run/Clear ---
 
-  const appendResult = useCallback((label: string, result: ScriptResult) => {
-    setLastResult(result);
-    setExportedActions(result.exportedActions);
-    setOutput(prev => {
-      const newOutput = [
-        ...prev,
-        `--- ${label} (${result.duration.toFixed(1)}ms) ---`,
-        ...result.output,
-      ];
-      if (result.error) {
-        newOutput.push(`[ERROR] ${result.error}`);
-      }
-      return newOutput;
-    });
-    onBufferModified();
-    setTimeout(() => {
-      outputScrollRef.current?.scrollToEnd?.({ animated: true });
-    }, 50);
-  }, [onBufferModified]);
+  const appendResult = useCallback(
+    (label: string, result: ScriptResult) => {
+      setLastResult(result);
+      setExportedActions(result.exportedActions);
+      setOutput((prev) => {
+        const newOutput = [
+          ...prev,
+          `--- ${label} (${result.duration.toFixed(1)}ms) ---`,
+          ...result.output,
+        ];
+        if (result.error) {
+          newOutput.push(`[ERROR] ${result.error}`);
+        }
+        return newOutput;
+      });
+      onBufferModified();
+      setTimeout(() => {
+        outputScrollRef.current?.scrollToEnd?.({ animated: true });
+      }, 50);
+    },
+    [onBufferModified],
+  );
 
   const handleRun = useCallback(() => {
     if (!viewRef.current || !buffer) return;
     const code = viewRef.current.state.doc.toString();
     const result = executeScript(code, { buffer, cursorPosition, selection });
-    const label = activeScript ? `Run [${activeScript.name}]` : 'Run';
+    const label = activeScript ? `Run [${activeScript.name}]` : "Run";
     appendResult(label, result);
   }, [buffer, cursorPosition, selection, activeScript, appendResult]);
 
-  const handleRunAction = useCallback((actionName: string) => {
-    if (!viewRef.current || !buffer) return;
-    const code = viewRef.current.state.doc.toString();
-    const result = executeAction(code, actionName, { buffer, cursorPosition, selection });
-    const label = activeScript ? `${activeScript.name} \u2192 ${actionName}` : actionName;
-    appendResult(label, result);
-  }, [buffer, cursorPosition, selection, activeScript, appendResult]);
+  const handleRunAction = useCallback(
+    (actionName: string) => {
+      if (!viewRef.current || !buffer) return;
+      const code = viewRef.current.state.doc.toString();
+      const result = executeAction(code, actionName, {
+        buffer,
+        cursorPosition,
+        selection,
+      });
+      const label = activeScript
+        ? `${activeScript.name} \u2192 ${actionName}`
+        : actionName;
+      appendResult(label, result);
+    },
+    [buffer, cursorPosition, selection, activeScript, appendResult],
+  );
 
   const handleClear = useCallback(() => {
     setOutput([]);
     setLastResult(null);
   }, []);
 
-  if (Platform.OS !== 'web') {
+  if (Platform.OS !== "web") {
     return (
       <View style={styles.container}>
-        <Text style={styles.unsupported}>Scripting is only available on web platform.</Text>
+        <Text style={styles.unsupported}>
+          Scripting is only available on web platform.
+        </Text>
       </View>
     );
   }
@@ -233,25 +267,33 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     <View style={styles.container}>
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.hamburger} onPress={() => setShowTree(prev => !prev)}>
-          <Text style={styles.hamburgerText}>{'\u2630'}</Text>
+        <TouchableOpacity
+          style={styles.hamburger}
+          onPress={() => setShowTree((prev) => !prev)}
+        >
+          <Text style={styles.hamburgerText}>{showTree ? "{ }" : "{}"}</Text>
         </TouchableOpacity>
         <Text style={styles.toolbarTitle} numberOfLines={1}>
-          {activeScript ? getNodePath(scriptNodes, activeScript.id) : 'Script Editor'}
+          {activeScript
+            ? getNodePath(scriptNodes, activeScript.id)
+            : "Script Editor"}
         </Text>
         <View style={styles.toolbarButtons}>
           <TouchableOpacity
-            style={[styles.runButton, (!buffer || !activeScript) && styles.buttonDisabled]}
+            style={[
+              styles.runButton,
+              (!buffer || !activeScript) && styles.buttonDisabled,
+            ]}
             onPress={handleRun}
             disabled={!buffer || !activeScript}
           >
-            <Text style={styles.runButtonText}>{'\u25B6'} Run</Text>
+            <Text style={styles.runButtonText}>{"\u25B6"} Run</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolbarButton} onPress={handleClear}>
             <Text style={styles.toolbarButtonText}>Clear</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>{'\u2715'}</Text>
+            <Text style={styles.closeButtonText}>{"\u2715"}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -259,17 +301,19 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       {/* Body: tree sidebar + editor/output */}
       <View style={styles.body}>
         {/* Script tree sidebar */}
-        {showTree && <View style={styles.treeSidebar}>
-          <ScriptTree
-            nodes={scriptNodes}
-            activeScriptId={activeScript?.id ?? null}
-            onSelectScript={handleSelectScript}
-            onCreateScript={handleCreateScript}
-            onCreateFolder={handleCreateFolder}
-            onDeleteNode={handleDeleteNode}
-            onRenameNode={handleRenameNode}
-          />
-        </View>}
+        {showTree && (
+          <View style={styles.treeSidebar}>
+            <ScriptTree
+              nodes={scriptNodes}
+              activeScriptId={activeScript?.id ?? null}
+              onSelectScript={handleSelectScript}
+              onCreateScript={handleCreateScript}
+              onCreateFolder={handleCreateFolder}
+              onDeleteNode={handleDeleteNode}
+              onRenameNode={handleRenameNode}
+            />
+          </View>
+        )}
 
         {/* Editor + Output */}
         <View style={styles.editorArea}>
@@ -281,9 +325,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                   key={activeScript.id}
                   ref={editorRefCallback}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    overflow: 'hidden',
+                    width: "100%",
+                    height: "100%",
+                    overflow: "hidden",
                   }}
                 />
               </View>
@@ -292,14 +336,20 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
               {exportedActions.length > 0 && (
                 <View style={styles.actionsBar}>
                   <Text style={styles.actionsLabel}>Actions:</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.actionsScroll}>
-                    {exportedActions.map(name => (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.actionsScroll}
+                  >
+                    {exportedActions.map((name) => (
                       <TouchableOpacity
                         key={name}
                         style={styles.actionButton}
                         onPress={() => handleRunAction(name)}
                       >
-                        <Text style={styles.actionButtonText}>{'\u25B6'} {name}</Text>
+                        <Text style={styles.actionButtonText}>
+                          {"\u25B6"} {name}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -311,7 +361,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                 <View style={styles.outputHeader}>
                   <Text style={styles.outputTitle}>Output</Text>
                   {lastResult && !lastResult.error && (
-                    <Text style={styles.outputSuccess}>OK ({lastResult.duration.toFixed(1)}ms)</Text>
+                    <Text style={styles.outputSuccess}>
+                      OK ({lastResult.duration.toFixed(1)}ms)
+                    </Text>
                   )}
                   {lastResult?.error && (
                     <Text style={styles.outputError}>Error</Text>
@@ -323,9 +375,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                       key={i}
                       style={[
                         styles.outputLine,
-                        line.startsWith('[ERROR]') && styles.outputLineError,
-                        line.startsWith('[WARN]') && styles.outputLineWarn,
-                        line.startsWith('---') && styles.outputLineSeparator,
+                        line.startsWith("[ERROR]") && styles.outputLineError,
+                        line.startsWith("[WARN]") && styles.outputLineWarn,
+                        line.startsWith("---") && styles.outputLineSeparator,
                       ]}
                     >
                       {line}
@@ -367,22 +419,21 @@ function buildExtensions(onChange: () => void) {
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     javascript(),
     oneDark,
-    keymap.of([
-      ...closeBracketsKeymap,
-      ...defaultKeymap,
-      ...historyKeymap,
-    ]),
+    keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap]),
     EditorView.theme({
-      '&': { height: '100%', fontSize: '13px' },
-      '.cm-scroller': { overflow: 'auto', fontFamily: "'Menlo', 'Consolas', 'Monaco', monospace" },
-      '.cm-content': { minHeight: '200px' },
+      "&": { height: "100%", fontSize: "13px" },
+      ".cm-scroller": {
+        overflow: "auto",
+        fontFamily: "'Menlo', 'Consolas', 'Monaco', monospace",
+      },
+      ".cm-content": { minHeight: "200px" },
     }),
     EditorView.domEventHandlers({
       keydown(event) {
         event.stopPropagation();
       },
     }),
-    EditorView.updateListener.of(update => {
+    EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         onChange();
       }
@@ -393,19 +444,19 @@ function buildExtensions(onChange: () => void) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: "#1e1e1e",
     borderLeftWidth: 1,
-    borderLeftColor: '#333',
+    borderLeftColor: "#333",
   },
   toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#2d2d2d',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#2d2d2d",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#404040',
+    borderBottomColor: "#404040",
   },
   hamburger: {
     paddingHorizontal: 6,
@@ -414,50 +465,50 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   hamburgerText: {
-    color: '#cccccc',
+    color: "#cccccc",
     fontSize: 16,
   },
   toolbarTitle: {
-    color: '#cccccc',
+    color: "#cccccc",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     flex: 1,
   },
   toolbarButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 6,
   },
   runButton: {
-    backgroundColor: '#2ea043',
+    backgroundColor: "#2ea043",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 4,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 4,
   },
   runButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   toolbarButton: {
-    backgroundColor: '#404040',
+    backgroundColor: "#404040",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 4,
   },
   toolbarButtonText: {
-    color: '#cccccc',
+    color: "#cccccc",
     fontSize: 13,
   },
   closeButton: {
-    backgroundColor: '#404040',
+    backgroundColor: "#404040",
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 4,
   },
   closeButtonText: {
-    color: '#cccccc',
+    color: "#cccccc",
     fontSize: 13,
   },
   buttonDisabled: {
@@ -465,121 +516,121 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   treeSidebar: {
     width: 200,
     borderRightWidth: 1,
-    borderRightColor: '#333',
+    borderRightColor: "#333",
   },
   editorArea: {
     flex: 1,
   },
   splitView: {
     flex: 1,
-    flexDirection: 'column',
+    flexDirection: "column",
   },
   editorPane: {
     flex: 3,
     minHeight: 150,
   },
   actionsBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#252526',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#252526",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderTopWidth: 1,
-    borderTopColor: '#404040',
+    borderTopColor: "#404040",
     gap: 6,
   },
   actionsLabel: {
-    color: '#6e7681',
+    color: "#6e7681",
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   actionsScroll: {
     flexGrow: 0,
   },
   actionButton: {
-    backgroundColor: '#30363d',
+    backgroundColor: "#30363d",
     borderWidth: 1,
-    borderColor: '#484f58',
+    borderColor: "#484f58",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 3,
     marginRight: 4,
   },
   actionButtonText: {
-    color: '#58a6ff',
+    color: "#58a6ff",
     fontSize: 12,
   },
   outputPane: {
     flex: 2,
     minHeight: 100,
     borderTopWidth: 1,
-    borderTopColor: '#404040',
+    borderTopColor: "#404040",
   },
   outputHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: '#252526',
+    backgroundColor: "#252526",
     gap: 8,
   },
   outputTitle: {
-    color: '#cccccc',
+    color: "#cccccc",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   outputSuccess: {
-    color: '#2ea043',
+    color: "#2ea043",
     fontSize: 11,
   },
   outputError: {
-    color: '#f85149',
+    color: "#f85149",
     fontSize: 11,
   },
   outputScroll: {
     flex: 1,
     padding: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: "#1a1a1a",
   },
   outputLine: {
-    color: '#d4d4d4',
+    color: "#d4d4d4",
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: "monospace",
     lineHeight: 18,
   },
   outputLineError: {
-    color: '#f85149',
+    color: "#f85149",
   },
   outputLineWarn: {
-    color: '#d29922',
+    color: "#d29922",
   },
   outputLineSeparator: {
-    color: '#6e7681',
+    color: "#6e7681",
     marginTop: 4,
     marginBottom: 2,
   },
   outputPlaceholder: {
-    color: '#6e7681',
+    color: "#6e7681",
     fontSize: 12,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   noScript: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1e1e1e',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1e1e1e",
   },
   noScriptText: {
-    color: '#6e7681',
+    color: "#6e7681",
     fontSize: 14,
   },
   unsupported: {
-    color: '#999',
+    color: "#999",
     fontSize: 14,
     padding: 20,
   },
