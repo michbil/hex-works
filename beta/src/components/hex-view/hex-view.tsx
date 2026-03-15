@@ -85,6 +85,9 @@ export function HexView({
   const [dimensions, setDimensions] = useState({ width: propWidth || 800, height: propHeight || 400 });
   const [focused, setFocused] = useState(false);
   const [textMode, setTextMode] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [ctxDialog, setCtxDialog] = useState<'fill' | 'xor' | null>(null);
+  const [fillValue, setFillValue] = useState('');
 
   // Scrollbar drag state
   const scrollbarGripRef = useRef(false);
@@ -680,11 +683,6 @@ export function HexView({
     setCursorPosition(Math.min(pos, buffer.length - 1));
     setSelection(cursorPosition, Math.min(cursorPosition + bytes.length - 1, buffer.length - 1));
   };
-
-  // Context menu
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
-  const [ctxDialog, setCtxDialog] = useState<'fill' | 'xor' | null>(null);
-  const [fillValue, setFillValue] = useState('');
 
   // Attach native contextmenu to canvas (desktop right-click)
   useEffect(() => {
