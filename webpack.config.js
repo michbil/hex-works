@@ -1,51 +1,72 @@
-var path = require('path');
-var webpack = require('webpack');
+const path = require('path');
+const CopyPlugin = require('copy-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
-
-var e = {
+module.exports = {
     entry: [
-        //"./views/lib/sw.js",
-        "./views/material/js/ripples.min.js",
-        "./views/material/js/material.min.js",
-        './src/index.js'],
+        './views/material/js/ripples.min.js',
+        './views/material/js/material.min.js',
+        './src/index.js'
+    ],
     output: {
-        path: './dist/',
+        path: path.resolve(__dirname, 'dist'),
         filename: 'index.js',
         devtoolModuleFilenameTemplate: '[absolute-resource-path]'
     },
-
     module: {
-        loaders: [
+        rules: [
             {
-                test: /.js?$/,
+                test: /\.js$/,
                 loader: 'babel-loader',
-                exclude: [/node_modules/,/views/],
-                query: {
-                    presets: ['react', 'es2015','stage-0']
+                exclude: [/node_modules/, /views/],
+                options: {
+                    presets: ['@babel/preset-env']
                 }
             }
         ]
-        ,
     },
-
-
-    devServer: {
-        port: 8000,
-        contentBase: "./dist/",
-        colors: true,
-        inline:true,
-        historyApiFallback: true
+    optimization: {
+        minimizer: [
+            new TerserPlugin({
+                terserOptions: {
+                    mangle: false
+                }
+            })
+        ]
     },
     plugins: [
-        new webpack.optimize.UglifyJsPlugin({
-            compress:{
-                warnings: false,
-            },
-            mangle: false
-    })],
+        new CopyPlugin({
+            patterns: [
+                { from: 'views', to: '.' },
+                {
+                    from: 'beta/dist',
+                    to: 'beta',
+                    noErrorOnMissing: true,
+                    transform: {
+                        transformer(content, absoluteFrom) {
+                            if (absoluteFrom.endsWith('.html')) {
+                                return content.toString()
+                                    .replace(/src="\/_expo\//g, 'src="_expo/')
+                                    .replace(/href="\/_expo\//g, 'href="_expo/')
+                                    .replace(/href="\/favicon/g, 'href="favicon');
+                            }
+                            return content;
+                        }
+                    }
+                }
+            ]
+        })
+    ],
+    devServer: {
+        port: 8000,
+        static: [
+            { directory: path.resolve(__dirname, 'dist') }
+        ],
+        historyApiFallback: {
+            rewrites: [
+                { from: /^\/beta/, to: '/beta/index.html' }
+            ]
+        }
+    },
     devtool: 'source-map'
-
-
 };
-
-module.exports = e;

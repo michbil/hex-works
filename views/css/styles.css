@@ -218,8 +218,11 @@ html,body {
     bottom: 30px;
     width:100%;*/
     position: relative;
-    height: calc(100% - 104px - 30px);
+    height: calc(100% - 104px - 30px - 36px);
 
+}
+.beta-banner-hidden .bodycont {
+    height: calc(100% - 104px - 30px);
 }
 .fontpeek {
     font-family: 'Source Code Pro';

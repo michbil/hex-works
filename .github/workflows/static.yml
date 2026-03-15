@@ -31,12 +31,41 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build main app
+        run: |
+          npm ci
+          npm run dist
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Build beta app
+        working-directory: ./beta
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run export:web
+
+      - name: Prepare deployment
+        run: |
+          # Copy beta build output into dist/beta/
+          mkdir -p ./dist/beta
+          cp -r ./beta/dist/* ./dist/beta/
+          # Fix absolute asset paths for /beta/ subpath
+          sed -i 's|src="/_expo/|src="_expo/|g' ./dist/beta/index.html
+          sed -i 's|href="/_expo/|href="_expo/|g' ./dist/beta/index.html
+          sed -i 's|href="/favicon|href="favicon|g' ./dist/beta/index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          # Upload entire repository
           path: "./dist/"
       - name: Deploy to GitHub Pages
         id: deployment

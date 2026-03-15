@@ -1,42 +1,22 @@
 {
   "name": "hexedit",
   "version": "0.1.0beta",
-  "browserify": {
-    "transform": [
-      "babelify"
-    ]
+  "scripts": {
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "copy": "node -e \"const fs=require('fs');const path=require('path');function cpDir(s,d){fs.mkdirSync(d,{recursive:true});for(const e of fs.readdirSync(s,{withFileTypes:true})){const sp=path.join(s,e.name),dp=path.join(d,e.name);e.isDirectory()?cpDir(sp,dp):fs.copyFileSync(sp,dp)}}cpDir('./views','./dist')\"",
+    "dist": "npm run copy && npm run build",
+    "dev": "webpack serve --mode development --open"
   },
   "devDependencies": {
-    "babel-eslint": "^6.0.0",
-    "babel-loader": "^6.0.0",
-    "babel-polyfill": "^6.9.1",
-    "babel-preset-es2015": "^6.3.13",
-    "babel-preset-react": "^6.3.13",
-    "babel-preset-stage-0": "^6.5.0",
-    "babel-register": "^6.9.0",
-    "babelify": "^6.3.0",
-    "browserify": "^11.0.1",
-    "grunt": "~0.4.5",
-    "grunt-contrib-jshint": "~0.10.0",
-    "grunt-contrib-nodeunit": "~0.4.1",
-    "grunt-contrib-uglify": "~0.5.0",
-    "grunt-html-angular-validate": "^0.4.0",
-    "gulp": "^3.9.0",
-    "gulp-browserify": "^0.5.1",
-    "gulp-rename": "^1.2.2",
-    "gulp-sourcemaps": "^1.6.0",
-    "gulp-uglify": "^1.4.0",
-    "gulp-wrapper": "^1.0.0",
-    "jasmine-core": "^2.1.3",
-    "karma": "^0.12.31",
-    "karma-chrome-launcher": "^0.1.7",
-    "karma-jasmine": "^0.3.4",
-    "karma-ng-html2js-preprocessor": "^0.1.2",
-    "karma-safari-launcher": "^0.1.1",
-    "sw-precache": "^3.2.0",
-    "vinyl-source-stream": "^1.1.0",
-    "webpack": "^1.12.12",
-    "webpack-cli": "^5.1.4"
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "babel-loader": "^9.2.0",
+    "copy-webpack-plugin": "^12.0.0",
+    "terser-webpack-plugin": "^5.3.0",
+    "webpack": "^5.97.0",
+    "webpack-cli": "^6.0.0",
+    "webpack-dev-server": "^5.2.0"
   },
   "dependencies": {
     "angular": "^1.4.5",
@@ -45,17 +25,11 @@
     "bootstrap": "^3.3.5",
     "clipboard": "^1.6.1",
     "file-saver": "^1.3.3",
-    "grunt-contrib-concat": "^0.5.1",
-    "grunt-contrib-copy": "^0.8.0",
-    "grunt-jslint": "^1.1.14",
-    "grunt-karma": "^0.11.0",
-    "grunt-targethtml": "^0.2.6",
-    "gulp": "^3.9.0",
     "hammerjs": "^2.0.8",
     "jailed": "^0.3.1",
     "jbinary": "^2.1.3",
     "jquery": "^2.1.4",
-    "localforage": "^1.5.0",
-    "modernizr": "^3.0.0-alpha.4"
-  }
+    "localforage": "^1.5.0"
+  },
+  "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be"
 }
