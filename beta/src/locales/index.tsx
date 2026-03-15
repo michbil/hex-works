@@ -3,7 +3,7 @@
  * Provides i18n support for the app
  */
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { englocale, ruslocale, Locale } from './translations';
 
 type Language = 'eng' | 'rus';
@@ -31,12 +31,9 @@ export function LocaleProvider({ children, defaultLanguage = 'eng' }: LocaleProv
   const [language, setLanguage] = useState<Language>(defaultLanguage);
   const locale = locales[language];
 
-  const t = useCallback(
-    (key: keyof Locale): string => {
-      return locale[key] || key;
-    },
-    [locale]
-  );
+  const t = (key: keyof Locale): string => {
+    return locale[key] || key;
+  };
 
   const value: LocaleContextValue = {
     locale,

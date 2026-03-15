@@ -3,7 +3,7 @@
  * Ported from AngularJS hex-works app
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
   const [searchResult, setSearchResult] = useState<string | null>(null);
 
   // Convert hex string to byte array
-  const hexStringToBytes = useCallback((hex: string): Uint8Array | null => {
+  const hexStringToBytes = (hex: string): Uint8Array | null => {
     const cleanHex = hex.replace(/[\s:]/g, '');
     if (!/^[0-9a-fA-F]*$/.test(cleanHex)) {
       return null;
@@ -57,10 +57,17 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
       bytes[i] = parseInt(cleanHex.substr(i * 2, 2), 16);
     }
     return bytes;
-  }, []);
+  };
+
+  const navigateToMatch = (match: SearchMatch) => {
+    setCursorPosition(match.offset);
+    setSelection(match.offset, match.offset + match.length - 1);
+    const lineNumber = Math.floor(match.offset / bytesPerLine);
+    setScrollOffset(Math.max(0, (lineNumber - 5) * bytesPerLine));
+  };
 
   // Find all occurrences
-  const findAll = useCallback(() => {
+  const findAll = () => {
     if (!buffer || !searchQuery) {
       setSearchResult('Enter a search query');
       setMatches([]);
@@ -124,22 +131,15 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
       setActiveIndex(0);
       navigateToMatch(results[0]);
     }
-  }, [buffer, searchQuery, searchMode, caseSensitive, hexStringToBytes, bytesPerLine]);
+  };
 
-  const navigateToMatch = useCallback((match: SearchMatch) => {
-    setCursorPosition(match.offset);
-    setSelection(match.offset, match.offset + match.length - 1);
-    const lineNumber = Math.floor(match.offset / bytesPerLine);
-    setScrollOffset(Math.max(0, (lineNumber - 5) * bytesPerLine));
-  }, [setCursorPosition, setSelection, setScrollOffset, bytesPerLine]);
-
-  const handleMatchPress = useCallback((index: number) => {
+  const handleMatchPress = (index: number) => {
     setActiveIndex(index);
     navigateToMatch(matches[index]);
-  }, [matches, navigateToMatch]);
+  };
 
   // Find next from current active
-  const findNext = useCallback(() => {
+  const findNext = () => {
     if (matches.length === 0) {
       findAll();
       return;
@@ -147,10 +147,10 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
     const next = (activeIndex + 1) % matches.length;
     setActiveIndex(next);
     navigateToMatch(matches[next]);
-  }, [matches, activeIndex, navigateToMatch, findAll]);
+  };
 
   // Find previous
-  const findPrev = useCallback(() => {
+  const findPrev = () => {
     if (matches.length === 0) {
       findAll();
       return;
@@ -158,7 +158,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
     const prev = (activeIndex - 1 + matches.length) % matches.length;
     setActiveIndex(prev);
     navigateToMatch(matches[prev]);
-  }, [matches, activeIndex, navigateToMatch, findAll]);
+  };
 
   return (
     <View style={styles.container}>

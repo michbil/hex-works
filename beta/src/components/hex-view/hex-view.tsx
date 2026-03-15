@@ -3,7 +3,7 @@
  * Ported from AngularJS hex-works app
  */
 
-import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useEffectEvent, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { createPortal } from 'react-dom';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
@@ -81,7 +81,6 @@ export function HexView({
     selection,
     isEditing,
     editNibble,
-    renderKey,
     setCursorPosition,
     setScrollOffset,
     setSelection,
@@ -92,35 +91,18 @@ export function HexView({
     swapBytes,
     fillSelection,
     getColorBuffer,
-    masterTabId,
   } = useHexEditorStore();
 
   // Calculate layout metrics
   const SCROLLBAR_WIDTH = 10;
-  const metrics = useMemo(() => {
-    const charWidth = fontSize * 0.6; // Approximate monospace char width
-    const lineHeight = fontSize + 4;
-    const addressWidth = charWidth * 9; // 8 chars + space
-    const useSpaces = dimensions.width >= 650; // Always use spaces between hex bytes, like Angular version
-    const hexCharWidth = useSpaces ? 3 : 2; // "XX " or "XX"
-    const hexWidth = charWidth * bytesPerLine * hexCharWidth;
-    const asciiWidth = charWidth * bytesPerLine;
-    const gap = charWidth * 2;
-    const scrollbarX = dimensions.width - SCROLLBAR_WIDTH;
-
-    return {
-      charWidth,
-      lineHeight,
-      addressWidth,
-      hexWidth,
-      asciiWidth,
-      gap,
-      useSpaces,
-      hexCharWidth,
-      scrollbarX,
-      visibleRows: Math.floor(dimensions.height / lineHeight),
-    };
-  }, [fontSize, bytesPerLine, dimensions]);
+  const charWidth = fontSize * 0.6;
+  const lineHeight = fontSize + 4;
+  const addressWidth = charWidth * 9;
+  const useSpaces = dimensions.width >= 650;
+  const hexCharWidth = useSpaces ? 3 : 2;
+  const gap = charWidth * 2;
+  const scrollbarX = dimensions.width - SCROLLBAR_WIDTH;
+  const visibleRows = Math.floor(dimensions.height / lineHeight);
 
   // Handle resize — measure actual container element
   useEffect(() => {
@@ -153,44 +135,37 @@ export function HexView({
   }, [propWidth, propHeight]);
 
   // Get background color for a byte
-  const getByteBackground = useCallback(
-    (index: number): string => {
-      if (!buffer) return COLOR_MAP[0];
+  const getByteBackground = (index: number): string => {
+    if (!buffer) return COLOR_MAP[0];
 
-      // Selection has priority
-      const selStart = Math.min(selection.start, selection.end);
-      const selEnd = Math.max(selection.start, selection.end);
-      if (index >= selStart && index <= selEnd && selStart !== selEnd) {
-        return '#999999';
-      }
+    // Selection has priority
+    const selStart = Math.min(selection.start, selection.end);
+    const selEnd = Math.max(selection.start, selection.end);
+    if (index >= selStart && index <= selEnd && selStart !== selEnd) {
+      return '#999999';
+    }
 
-      // Then colors from buffer (use master tab's buffer if set)
-      const colorBuf = getColorBuffer() ?? buffer;
-      const colorCode = colorBuf.getColor?.(index) ?? 0;
-      return COLOR_MAP[colorCode] || COLOR_MAP[0];
-    },
-    // masterTabId ensures callback is recreated when master tab changes
-    [buffer, selection, getColorBuffer, masterTabId]
-  );
+    // Then colors from buffer (use master tab's buffer if set)
+    const colorBuf = getColorBuffer() ?? buffer;
+    const colorCode = colorBuf.getColor?.(index) ?? 0;
+    return COLOR_MAP[colorCode] || COLOR_MAP[0];
+  };
 
   // Check if byte is marked (modified)
-  const isMarked = useCallback(
-    (index: number): boolean => {
-      return buffer?.isMarked?.(index) ?? false;
-    },
-    [buffer]
-  );
+  const isMarked = (index: number): boolean => {
+    return buffer?.isMarked?.(index) ?? false;
+  };
 
   // Calculate scrollbar parameters
-  const getScrollbarParams = useCallback(() => {
+  const getScrollbarParams = () => {
     if (!buffer) return null;
     const totalBytes = buffer.length;
     const totalLines = Math.ceil(totalBytes / bytesPerLine);
-    if (totalLines <= metrics.visibleRows) return null; // No scrollbar needed
+    if (totalLines <= visibleRows) return null; // No scrollbar needed
 
-    const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
+    const maxOffset = Math.max(0, (totalLines - visibleRows) * bytesPerLine);
     const canvasHeight = dimensions.height;
-    let gripHeight = canvasHeight * metrics.visibleRows / totalLines;
+    let gripHeight = canvasHeight * visibleRows / totalLines;
     if (gripHeight < 30) gripHeight = 30; // Minimum grip height
 
     const gripTop = maxOffset > 0
@@ -198,13 +173,13 @@ export function HexView({
       : 0;
 
     return { top: gripTop, height: gripHeight, maxOffset };
-  }, [buffer, metrics.visibleRows, bytesPerLine, scrollOffset, dimensions.height]);
+  };
 
   // Reverse-compute: pixel Y → buffer offset (for scrollbar drag)
-  const reverseScrollCompute = useCallback((y: number) => {
+  const reverseScrollCompute = (y: number) => {
     if (!buffer) return 0;
     const totalLines = Math.ceil(buffer.length / bytesPerLine);
-    const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
+    const maxOffset = Math.max(0, (totalLines - visibleRows) * bytesPerLine);
     const params = scrollbarParamsRef.current;
     if (!params) return 0;
 
@@ -218,17 +193,15 @@ export function HexView({
     if (offset < 0) offset = 0;
     if (offset > maxOffset) offset = maxOffset;
     return offset;
-  }, [buffer, metrics.visibleRows, bytesPerLine, dimensions.height]);
+  };
 
   // Render the hex view on canvas
-  const render = useCallback(() => {
+  const render = () => {
     if (Platform.OS !== 'web') return;
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx || !buffer) return;
-
-    const { lineHeight, addressWidth, charWidth, useSpaces, hexCharWidth, visibleRows } = metrics;
 
     // Scale canvas for high-DPI displays
     canvas.width = dimensions.width * dpr;
@@ -237,7 +210,7 @@ export function HexView({
 
     // Clear canvas
     ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-    
+
     // Set font with proper rendering hints
     ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.textBaseline = 'bottom';
@@ -258,7 +231,7 @@ export function HexView({
 
       // Draw hex values and ASCII
       let hexX = addressWidth;
-      let asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + metrics.gap;
+      let asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + gap;
 
       for (let col = 0; col < bytesPerLine; col++) {
         const byteIndex = lineOffset + col;
@@ -303,29 +276,15 @@ export function HexView({
     if (sbParams) {
       // Track background
       ctx.fillStyle = '#f0f0f0';
-      ctx.fillRect(metrics.scrollbarX, 0, SCROLLBAR_WIDTH, dimensions.height);
+      ctx.fillRect(scrollbarX, 0, SCROLLBAR_WIDTH, dimensions.height);
       // Grip
       ctx.fillStyle = '#aaaaaa';
-      ctx.fillRect(metrics.scrollbarX, sbParams.top, SCROLLBAR_WIDTH, sbParams.height);
+      ctx.fillRect(scrollbarX, sbParams.top, SCROLLBAR_WIDTH, sbParams.height);
     }
-  }, [
-    buffer,
-    scrollOffset,
-    bytesPerLine,
-    metrics,
-    fontSize,
-    fontFamily,
-    getByteBackground,
-    isMarked,
-    dpr,
-    dimensions,
-    renderKey,
-    getScrollbarParams,
-    metrics.scrollbarX,
-  ]);
+  };
 
   // Render cursor
-  const renderCursor = useCallback(() => {
+  const renderCursor = () => {
     if (Platform.OS !== 'web') return;
 
     const canvas = cursorCanvasRef.current;
@@ -341,13 +300,12 @@ export function HexView({
 
     if (!focused) return;
 
-    const { lineHeight, addressWidth, charWidth, hexCharWidth } = metrics;
     const startLine = Math.floor(scrollOffset / bytesPerLine);
     const cursorLine = Math.floor(cursorPosition / bytesPerLine);
     const cursorCol = cursorPosition % bytesPerLine;
 
     // Check if cursor is visible
-    if (cursorLine < startLine || cursorLine >= startLine + metrics.visibleRows) return;
+    if (cursorLine < startLine || cursorLine >= startLine + visibleRows) return;
 
     const row = cursorLine - startLine;
     const y = (row + 1) * lineHeight;
@@ -357,7 +315,7 @@ export function HexView({
 
     if (textMode) {
       // Cursor in ASCII area
-      const asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + metrics.gap + cursorCol * charWidth;
+      const asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + gap + cursorCol * charWidth;
       ctx.fillRect(asciiX, y - lineHeight + 2, charWidth, lineHeight);
     } else {
       // Cursor in hex area
@@ -365,156 +323,152 @@ export function HexView({
       const nibbleOffset = editNibble === 'low' ? charWidth : 0;
       ctx.fillRect(hexX + nibbleOffset, y - lineHeight + 2, charWidth, lineHeight);
     }
-  }, [buffer, cursorPosition, scrollOffset, bytesPerLine, focused, textMode, editNibble, metrics, dpr, dimensions]);
+  };
 
   // Re-render when state changes
   useEffect(() => {
     render();
     renderCursor();
-  }, [render, renderCursor]);
+  });
 
   // Global mouse handlers for scrollbar drag
+  const onScrollbarDrag = useEffectEvent((e: MouseEvent) => {
+    if (!scrollbarGripRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
+    setScrollOffset(offset);
+  });
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!scrollbarGripRef.current) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
-      setScrollOffset(offset);
-    };
 
     const handleGlobalMouseUp = () => {
       scrollbarGripRef.current = false;
     };
 
-    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mousemove', onScrollbarDrag);
     window.addEventListener('mouseup', handleGlobalMouseUp);
     return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mousemove', onScrollbarDrag);
       window.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [reverseScrollCompute, setScrollOffset]);
+  }, []);
 
   // Mouse event handlers
-  const handleMouseEvent = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>, eventType: 'down' | 'up' | 'move') => {
-      if (!buffer) return;
-      // Ignore right-click so selection is preserved for context menu
-      if (event.button === 2) return;
+  const handleMouseEvent = (event: React.MouseEvent<HTMLCanvasElement>, eventType: 'down' | 'up' | 'move') => {
+    if (!buffer) return;
+    // Ignore right-click so selection is preserved for context menu
+    if (event.button === 2) return;
 
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
-      // Scrollbar interaction
-      if (x > metrics.scrollbarX - 5) {
-        if (eventType === 'down') {
-          const sbParams = scrollbarParamsRef.current;
-          if (sbParams) {
-            if (y >= sbParams.top && y <= sbParams.top + sbParams.height) {
-              // Grabbed the grip — store offset from grip top for smooth drag
-              scrollbarGripRef.current = true;
-              scrollbarDragOffsetRef.current = sbParams.top - y;
-            } else {
-              // Clicked in scrollbar track above/below grip — jump to position
-              scrollbarGripRef.current = true;
-              scrollbarDragOffsetRef.current = -(sbParams.height / 2);
-              const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
-              setScrollOffset(offset);
-            }
+    // Scrollbar interaction
+    if (x > scrollbarX - 5) {
+      if (eventType === 'down') {
+        const sbParams = scrollbarParamsRef.current;
+        if (sbParams) {
+          if (y >= sbParams.top && y <= sbParams.top + sbParams.height) {
+            // Grabbed the grip — store offset from grip top for smooth drag
+            scrollbarGripRef.current = true;
+            scrollbarDragOffsetRef.current = sbParams.top - y;
+          } else {
+            // Clicked in scrollbar track above/below grip — jump to position
+            scrollbarGripRef.current = true;
+            scrollbarDragOffsetRef.current = -(sbParams.height / 2);
+            const offset = reverseScrollCompute(y + scrollbarDragOffsetRef.current);
+            setScrollOffset(offset);
           }
         }
-        return; // Don't process as hex/ascii click
+      }
+      return; // Don't process as hex/ascii click
+    }
+
+    // If scrollbar is being dragged, ignore other mouse events
+    if (scrollbarGripRef.current) return;
+
+    const row = Math.floor(y / lineHeight);
+    const startLine = Math.floor(scrollOffset / bytesPerLine);
+    const lineOffset = (startLine + row) * bytesPerLine;
+
+    // Determine if click is in hex or ASCII area
+    let col = -1;
+    let isAscii = false;
+
+    const hexEnd = addressWidth + charWidth * bytesPerLine * hexCharWidth;
+    const asciiStart = hexEnd + gap;
+
+    if (x >= addressWidth && x < hexEnd) {
+      // Hex area
+      col = Math.floor((x - addressWidth) / (charWidth * hexCharWidth));
+      isAscii = false;
+    } else if (x >= asciiStart) {
+      // ASCII area
+      col = Math.floor((x - asciiStart) / charWidth);
+      isAscii = true;
+    }
+
+    if (col < 0 || col >= bytesPerLine) return;
+
+    const byteIndex = lineOffset + col;
+    if (byteIndex < 0 || byteIndex >= buffer.length) return;
+
+    if (eventType === 'down') {
+      setTextMode(isAscii);
+      setCursorPosition(byteIndex);
+      setIsEditing(true);
+
+      // Handle nibble selection in hex mode
+      if (!isAscii) {
+        const hexX = addressWidth + col * charWidth * hexCharWidth;
+        const relX = x - hexX;
+        setEditNibble(relX < charWidth ? 'high' : 'low');
       }
 
-      // If scrollbar is being dragged, ignore other mouse events
-      if (scrollbarGripRef.current) return;
-
-      const { lineHeight, addressWidth, charWidth, hexCharWidth } = metrics;
-      const row = Math.floor(y / lineHeight);
-      const startLine = Math.floor(scrollOffset / bytesPerLine);
-      const lineOffset = (startLine + row) * bytesPerLine;
-
-      // Determine if click is in hex or ASCII area
-      let col = -1;
-      let isAscii = false;
-
-      const hexEnd = addressWidth + charWidth * bytesPerLine * hexCharWidth;
-      const asciiStart = hexEnd + metrics.gap;
-
-      if (x >= addressWidth && x < hexEnd) {
-        // Hex area
-        col = Math.floor((x - addressWidth) / (charWidth * hexCharWidth));
-        isAscii = false;
-      } else if (x >= asciiStart) {
-        // ASCII area
-        col = Math.floor((x - asciiStart) / charWidth);
-        isAscii = true;
-      }
-
-      if (col < 0 || col >= bytesPerLine) return;
-
-      const byteIndex = lineOffset + col;
-      if (byteIndex < 0 || byteIndex >= buffer.length) return;
-
-      if (eventType === 'down') {
-        setTextMode(isAscii);
-        setCursorPosition(byteIndex);
-        setIsEditing(true);
-
-        // Handle nibble selection in hex mode
-        if (!isAscii) {
-          const hexX = addressWidth + col * charWidth * hexCharWidth;
-          const relX = x - hexX;
-          setEditNibble(relX < charWidth ? 'high' : 'low');
-        }
-
-        // Start selection
-        setSelection(byteIndex, byteIndex);
-      } else if (eventType === 'move' && event.buttons === 1) {
-        // Drag to extend selection
-        setSelection(selection.start, byteIndex);
-      }
-    },
-    [buffer, metrics, scrollOffset, bytesPerLine, setCursorPosition, setSelection, setIsEditing, setEditNibble, selection.start, reverseScrollCompute, setScrollOffset]
-  );
+      // Start selection
+      setSelection(byteIndex, byteIndex);
+    } else if (eventType === 'move' && event.buttons === 1) {
+      // Drag to extend selection
+      setSelection(selection.start, byteIndex);
+    }
+  };
 
   // Wheel handler for scrolling
   // Attach wheel listener with { passive: false } to allow preventDefault
+  const onWheel = useEffectEvent((event: WheelEvent) => {
+    if (!buffer) return;
+    event.preventDefault();
+
+    const delta = Math.sign(event.deltaY) * bytesPerLine * 3;
+    const totalLines = Math.ceil(buffer.length / bytesPerLine);
+    const maxOffset = Math.max(0, (totalLines - visibleRows) * bytesPerLine);
+    const newOffset = Math.max(0, Math.min(maxOffset, scrollOffset + delta));
+
+    setScrollOffset(newOffset);
+  });
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const onWheel = (event: WheelEvent) => {
-      if (!buffer) return;
-      event.preventDefault();
-
-      const delta = Math.sign(event.deltaY) * bytesPerLine * 3;
-      const totalLines = Math.ceil(buffer.length / bytesPerLine);
-      const maxOffset = Math.max(0, (totalLines - metrics.visibleRows) * bytesPerLine);
-      const newOffset = Math.max(0, Math.min(maxOffset, scrollOffset + delta));
-
-      setScrollOffset(newOffset);
-    };
-
     canvas.addEventListener('wheel', onWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', onWheel);
-  }, [buffer, bytesPerLine, scrollOffset, setScrollOffset, metrics.visibleRows]);
+  }, []);
 
   // Focus handlers
-  const handleFocus = useCallback(() => setFocused(true), []);
-  const handleBlur = useCallback(() => setFocused(false), []);
+  const handleFocus = () => setFocused(true);
+  const handleBlur = () => setFocused(false);
 
   // Clipboard: copy selected bytes as hex string
-  const handleCopy = useCallback(async () => {
+  const handleCopy = async () => {
     if (!buffer) return;
     const selStart = Math.min(selection.start, selection.end);
     const selEnd = Math.max(selection.start, selection.end);
@@ -541,10 +495,10 @@ export function HexView({
       document.execCommand('copy');
       document.body.removeChild(ta);
     }
-  }, [buffer, selection, cursorPosition]);
+  };
 
   // Clipboard: paste hex string at cursor
-  const handlePaste = useCallback(async () => {
+  const handlePaste = async () => {
     if (!buffer) return;
     let text: string;
     try {
@@ -569,7 +523,7 @@ export function HexView({
     }
     setCursorPosition(Math.min(pos, buffer.length - 1));
     setSelection(cursorPosition, Math.min(cursorPosition + bytes.length - 1, buffer.length - 1));
-  }, [buffer, cursorPosition, setByte, setCursorPosition, setSelection]);
+  };
 
   // Context menu
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
@@ -597,7 +551,7 @@ export function HexView({
     return () => { clearTimeout(id); window.removeEventListener('mousedown', close); };
   }, [ctxMenu]);
 
-  const handleFillSubmit = useCallback(() => {
+  const handleFillSubmit = () => {
     const seq = stringToByteSeq(fillValue);
     if (seq.length > 0) {
       fillSelection(seq, ctxDialog === 'xor');
@@ -605,157 +559,137 @@ export function HexView({
     setCtxMenu(null);
     setCtxDialog(null);
     setFillValue('');
-  }, [fillValue, fillSelection, ctxDialog]);
+  };
 
   // Keyboard handler
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
-      if (!buffer) return;
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (!buffer) return;
 
-      const { key, shiftKey, ctrlKey, metaKey } = event;
-      const mod = ctrlKey || metaKey;
+    const { key, shiftKey, ctrlKey, metaKey } = event;
+    const mod = ctrlKey || metaKey;
 
-      // Clipboard / selection shortcuts
-      if (mod && key.toLowerCase() === 'c') {
-        event.preventDefault();
-        handleCopy();
-        return;
-      }
-      if (mod && key.toLowerCase() === 'v') {
-        event.preventDefault();
-        handlePaste();
-        return;
-      }
-      if (mod && key.toLowerCase() === 'a') {
-        event.preventDefault();
-        setSelection(0, buffer.length - 1);
-        return;
-      }
-
-      let newPosition = cursorPosition;
-      let d = 0;
-
-      // Navigation
-      switch (key) {
-        case 'ArrowLeft':
-          if (!textMode && editNibble === 'low') {
-            setEditNibble('high');
-          } else {
-            setEditNibble('low');
-            d = -1;
-          }
-          break;
-        case 'ArrowRight':
-          if (!textMode && editNibble === 'high') {
-            setEditNibble('low');
-          } else {
-            setEditNibble('high');
-            d = 1;
-          }
-          break;
-        case 'ArrowUp':
-          d = -bytesPerLine;
-          break;
-        case 'ArrowDown':
-          d = bytesPerLine;
-          break;
-        case 'PageUp':
-          d = -bytesPerLine * metrics.visibleRows;
-          break;
-        case 'PageDown':
-          d = bytesPerLine * metrics.visibleRows;
-          break;
-        case 'Home':
-          newPosition = ctrlKey || metaKey ? 0 : Math.floor(cursorPosition / bytesPerLine) * bytesPerLine;
-          d = newPosition - cursorPosition;
-          break;
-        case 'End':
-          newPosition = ctrlKey || metaKey 
-            ? buffer.length - 1 
-            : Math.floor(cursorPosition / bytesPerLine) * bytesPerLine + bytesPerLine - 1;
-          d = newPosition - cursorPosition;
-          break;
-        default:
-          // Handle hex input
-          if (isEditing && !textMode) {
-            const hexMatch = key.match(/^[0-9a-fA-F]$/);
-            if (hexMatch) {
-              event.preventDefault();
-              const digit = parseInt(key, 16);
-              const currentByte = buffer.getByte(cursorPosition);
-
-              if (editNibble === 'high') {
-                const newByte = (digit << 4) | (currentByte & 0x0f);
-                setByte(cursorPosition, newByte);
-                setEditNibble('low');
-              } else {
-                const newByte = (currentByte & 0xf0) | digit;
-                setByte(cursorPosition, newByte);
-                setEditNibble('high');
-                d = 1;
-              }
-            } else {
-              return; // Not a hex key, ignore
-            }
-          } else if (isEditing && textMode) {
-            // ASCII input
-            if (key.length === 1 && key.charCodeAt(0) >= 0x20 && key.charCodeAt(0) < 0x7f) {
-              event.preventDefault();
-              setByte(cursorPosition, key.charCodeAt(0));
-              d = 1;
-            } else {
-              return; // Not a printable character, ignore
-            }
-          } else {
-            return; // Not in editing mode
-          }
-          break;
-      }
-
+    // Clipboard / selection shortcuts
+    if (mod && key.toLowerCase() === 'c') {
       event.preventDefault();
+      handleCopy();
+      return;
+    }
+    if (mod && key.toLowerCase() === 'v') {
+      event.preventDefault();
+      handlePaste();
+      return;
+    }
+    if (mod && key.toLowerCase() === 'a') {
+      event.preventDefault();
+      setSelection(0, buffer.length - 1);
+      return;
+    }
 
-      // Apply movement
-      newPosition = cursorPosition + d;
-      newPosition = Math.max(0, Math.min(buffer.length - 1, newPosition));
-      setCursorPosition(newPosition);
+    let newPosition = cursorPosition;
+    let d = 0;
 
-      // Update selection
-      if (shiftKey) {
-        setSelection(selection.start, newPosition);
-      } else {
-        setSelection(newPosition, newPosition);
-      }
+    // Navigation
+    switch (key) {
+      case 'ArrowLeft':
+        if (!textMode && editNibble === 'low') {
+          setEditNibble('high');
+        } else {
+          setEditNibble('low');
+          d = -1;
+        }
+        break;
+      case 'ArrowRight':
+        if (!textMode && editNibble === 'high') {
+          setEditNibble('low');
+        } else {
+          setEditNibble('high');
+          d = 1;
+        }
+        break;
+      case 'ArrowUp':
+        d = -bytesPerLine;
+        break;
+      case 'ArrowDown':
+        d = bytesPerLine;
+        break;
+      case 'PageUp':
+        d = -bytesPerLine * visibleRows;
+        break;
+      case 'PageDown':
+        d = bytesPerLine * visibleRows;
+        break;
+      case 'Home':
+        newPosition = ctrlKey || metaKey ? 0 : Math.floor(cursorPosition / bytesPerLine) * bytesPerLine;
+        d = newPosition - cursorPosition;
+        break;
+      case 'End':
+        newPosition = ctrlKey || metaKey
+          ? buffer.length - 1
+          : Math.floor(cursorPosition / bytesPerLine) * bytesPerLine + bytesPerLine - 1;
+        d = newPosition - cursorPosition;
+        break;
+      default:
+        // Handle hex input
+        if (isEditing && !textMode) {
+          const hexMatch = key.match(/^[0-9a-fA-F]$/);
+          if (hexMatch) {
+            event.preventDefault();
+            const digit = parseInt(key, 16);
+            const currentByte = buffer.getByte(cursorPosition);
 
-      // Adjust scroll if needed
-      const cursorLine = Math.floor(newPosition / bytesPerLine);
-      const startLine = Math.floor(scrollOffset / bytesPerLine);
-      const endLine = startLine + metrics.visibleRows - 1;
+            if (editNibble === 'high') {
+              const newByte = (digit << 4) | (currentByte & 0x0f);
+              setByte(cursorPosition, newByte);
+              setEditNibble('low');
+            } else {
+              const newByte = (currentByte & 0xf0) | digit;
+              setByte(cursorPosition, newByte);
+              setEditNibble('high');
+              d = 1;
+            }
+          } else {
+            return; // Not a hex key, ignore
+          }
+        } else if (isEditing && textMode) {
+          // ASCII input
+          if (key.length === 1 && key.charCodeAt(0) >= 0x20 && key.charCodeAt(0) < 0x7f) {
+            event.preventDefault();
+            setByte(cursorPosition, key.charCodeAt(0));
+            d = 1;
+          } else {
+            return; // Not a printable character, ignore
+          }
+        } else {
+          return; // Not in editing mode
+        }
+        break;
+    }
 
-      if (cursorLine < startLine) {
-        setScrollOffset(cursorLine * bytesPerLine);
-      } else if (cursorLine > endLine) {
-        setScrollOffset((cursorLine - metrics.visibleRows + 1) * bytesPerLine);
-      }
-    },
-    [
-      buffer,
-      cursorPosition,
-      bytesPerLine,
-      scrollOffset,
-      textMode,
-      isEditing,
-      editNibble,
-      selection,
-      metrics.visibleRows,
-      setCursorPosition,
-      setScrollOffset,
-      setSelection,
-      setByte,
-      setEditNibble,
-      handleCopy,
-      handlePaste,
-    ]
-  );
+    event.preventDefault();
+
+    // Apply movement
+    newPosition = cursorPosition + d;
+    newPosition = Math.max(0, Math.min(buffer.length - 1, newPosition));
+    setCursorPosition(newPosition);
+
+    // Update selection
+    if (shiftKey) {
+      setSelection(selection.start, newPosition);
+    } else {
+      setSelection(newPosition, newPosition);
+    }
+
+    // Adjust scroll if needed
+    const cursorLine = Math.floor(newPosition / bytesPerLine);
+    const startLine = Math.floor(scrollOffset / bytesPerLine);
+    const endLine = startLine + visibleRows - 1;
+
+    if (cursorLine < startLine) {
+      setScrollOffset(cursorLine * bytesPerLine);
+    } else if (cursorLine > endLine) {
+      setScrollOffset((cursorLine - visibleRows + 1) * bytesPerLine);
+    }
+  };
 
   if (Platform.OS !== 'web') {
     // For native, we'd need a different approach (react-native-canvas or custom native view)
