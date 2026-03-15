@@ -43,7 +43,7 @@ function CtxMenuItem({ label, onClick }: { label: string; onClick: () => void })
 
 /** Calculate optimal bytesPerLine for a given pixel width and font size */
 function computeBytesPerLine(width: number, charWidth: number): number {
-  "use no memo";
+  'use no memo';
   // Layout: address(9 chars) + hex(N * 3 chars) + gap(2 chars) + ascii(N chars) + scrollbar(20px)
   // Solve for N: width >= charWidth * (9 + 3N + 2 + N) + 20
   //   width - 20 >= charWidth * (11 + 4N)

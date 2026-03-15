@@ -6,7 +6,7 @@ module.exports = function (api) {
         'babel-preset-expo',
         {
           'react-compiler': {
-            compilationMode: 'all',
+            compilationMode: 'infer',
             panicThreshold: 'all_errors',
           },
         },

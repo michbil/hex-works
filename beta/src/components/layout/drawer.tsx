@@ -3,7 +3,8 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform, useAnimatedValue } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform } from 'react-native';
+import { useAnimatedValue } from '../../hooks/use-animated-value';
 
 interface DrawerProps {
   visible: boolean;
