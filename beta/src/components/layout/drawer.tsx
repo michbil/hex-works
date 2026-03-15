@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform, useAnimatedValue } from 'react-native';
 
 interface DrawerProps {
   visible: boolean;
@@ -15,12 +15,12 @@ interface DrawerProps {
 const DRAWER_WIDTH = Math.min(Dimensions.get('window').width * 0.8, 320);
 
 export function Drawer({ visible, side, onClose, children }: DrawerProps) {
-  const translateX = useRef(new Animated.Value(side === 'left' ? -DRAWER_WIDTH : DRAWER_WIDTH)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const translateX = useAnimatedValue(side === 'left' ? -DRAWER_WIDTH : DRAWER_WIDTH);
+  const backdropOpacity = useAnimatedValue(0);
 
   // Swipe-to-dismiss tracking
   const panStartX = useRef(0);
-  const panCurrentX = useRef(new Animated.Value(0)).current;
+  const panCurrentX = useAnimatedValue(0);
 
   useEffect(() => {
     if (visible) {
