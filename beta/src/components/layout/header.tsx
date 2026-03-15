@@ -66,28 +66,6 @@ export function Header({ onSearchPress, onScriptPress, onHelpPress }: HeaderProp
         </TouchableOpacity>
       </View>
 
-      {/* Search & Script Buttons */}
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity
-          style={[styles.button, !buffer && styles.buttonDisabled]}
-          onPress={onSearchPress}
-          disabled={!buffer}
-        >
-          <Text style={[styles.buttonText, !buffer && styles.buttonTextDisabled]}>
-            {t('search')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, !buffer && styles.buttonDisabled]}
-          onPress={onScriptPress}
-          disabled={!buffer}
-        >
-          <Text style={[styles.buttonText, !buffer && styles.buttonTextDisabled]}>
-            {t('script')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* File Info */}
       <View style={styles.fileInfo}>
         {fileName && (
