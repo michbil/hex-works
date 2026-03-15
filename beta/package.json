@@ -1,6 +1,6 @@
 {
   "name": "hex-works-react",
-  "version": "1.0.0",
+  "version": "2.0.0-beta.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",

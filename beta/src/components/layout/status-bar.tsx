@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
 import { useLocale } from '../../locales';
+import { version } from '../../../package.json';
 
 export function StatusBar() {
   const { t } = useLocale();
@@ -15,6 +16,9 @@ export function StatusBar() {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>{t('ready')}</Text>
+        <View style={styles.rightSection}>
+          <Text style={styles.label}>v{version}</Text>
+        </View>
       </View>
     );
   }
@@ -62,6 +66,8 @@ export function StatusBar() {
         <Text style={styles.text}>
           {t('current')}: {cursorPosition} {t('of')} {buffer.length - 1}
         </Text>
+        <Text style={styles.separator}>|</Text>
+        <Text style={styles.label}>v{version}</Text>
       </View>
     </View>
   );

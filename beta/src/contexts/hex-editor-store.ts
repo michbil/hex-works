@@ -1,3 +1,4 @@
+'use no memo'
 import { create } from 'zustand';
 import { BinaryBuffer } from '../utils/binbuf';
 
