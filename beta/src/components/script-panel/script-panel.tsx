@@ -213,6 +213,43 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     };
   }, []);
 
+  // Auto-mount Vue when a UI script becomes active.
+  // Depends only on activeScript.id so we mount once on selection,
+  // not on every cursor/buffer change.
+  useEffect(() => {
+    if (activeScript?.scriptClass !== "ui" || !buffer) return;
+    const container = uiContainerRef.current;
+    if (!container) return;
+
+    uiHandleRef.current?.unmount();
+    uiHandleRef.current = null;
+    container.innerHTML = "";
+    setUiError(null);
+    setUiRunning(false);
+
+    // Use editor content (which equals saved code on open, or unsaved edits if any)
+    const code = viewRef.current?.state.doc.toString() ?? activeScript.code ?? "";
+    const { handle, error } = mountUIScript(
+      code,
+      container,
+      { buffer, cursorPosition, selection },
+      onBufferModified,
+    );
+
+    if (error) {
+      setUiError(error);
+    } else {
+      uiHandleRef.current = handle;
+      setUiRunning(true);
+    }
+
+    return () => {
+      uiHandleRef.current?.unmount();
+      uiHandleRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScript?.id]); // intentionally omit buffer/cursor/selection — Run button handles reruns
+
   // --- Script library actions ---
 
   const handleSelectScript = (script: ScriptNode) => {
