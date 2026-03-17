@@ -455,6 +455,7 @@ export function HexView({
     const { byteIndex, isAscii } = hit;
 
     if (eventType === 'down') {
+      canvas.focus();
       setTextMode(isAscii);
       setCursorPosition(byteIndex);
       setIsEditing(true);

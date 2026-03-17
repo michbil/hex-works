@@ -4,7 +4,7 @@
  * Scripts are persisted to localStorage with hierarchical folder support.
  */
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -184,7 +184,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
 
   // Ref callback: create/destroy CodeMirror when the div mounts/unmounts.
   // Using key={activeScript.id} on the div ensures this runs on each script switch.
-  const editorRefCallback = (el: HTMLDivElement | null) => {
+  // Must be stable (useCallback) so React doesn't re-invoke it on every render,
+  // which would tear down and recreate the editor (and steal focus) on each store update.
+  const editorRefCallback = useCallback((el: HTMLDivElement | null) => {
     if (viewRef.current) {
       viewRef.current.destroy();
       viewRef.current = null;
@@ -201,7 +203,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     viewRef.current = view;
     // Focus the editor so it's immediately typeable
     view.focus();
-  };
+  }, [extensions]);
 
   // Cleanup auto-save timer and any mounted Vue app
   useEffect(() => {
@@ -231,35 +233,36 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         setScriptNodes((prev) => updateScriptCode(prev, prevScript.id, code));
       }
     }
+    // Update ref synchronously so editorRefCallback reads the correct script
+    // when it fires during the commit phase (before useEffect runs).
+    activeScriptRef.current = script;
     setActiveScript(script);
   };
 
   const handleCreateScript = (parentId: string | null) => {
-    setScriptNodes((prev) => {
-      const result = createScript(
-        prev,
-        "New Script",
-        parentId,
-        DEFAULT_NEW_SCRIPT,
-        "cli",
-      );
-      setActiveScript(result.script);
-      return result.nodes;
-    });
+    const result = createScript(
+      scriptNodes,
+      "New Script",
+      parentId,
+      DEFAULT_NEW_SCRIPT,
+      "cli",
+    );
+    setScriptNodes(result.nodes);
+    activeScriptRef.current = result.script;
+    setActiveScript(result.script);
   };
 
   const handleCreateUIScript = (parentId: string | null) => {
-    setScriptNodes((prev) => {
-      const result = createScript(
-        prev,
-        "New UI Script",
-        parentId,
-        DEFAULT_NEW_UI_SCRIPT,
-        "ui",
-      );
-      setActiveScript(result.script);
-      return result.nodes;
-    });
+    const result = createScript(
+      scriptNodes,
+      "New UI Script",
+      parentId,
+      DEFAULT_NEW_UI_SCRIPT,
+      "ui",
+    );
+    setScriptNodes(result.nodes);
+    activeScriptRef.current = result.script;
+    setActiveScript(result.script);
   };
 
   const handleCreateFolder = (parentId: string | null) => {
@@ -270,26 +273,20 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   };
 
   const handleDeleteNode = (id: string) => {
-    setScriptNodes((prev) => {
-      const updated = deleteNode(prev, id);
-      // If deleted the active script, clear editor
-      if (activeScriptRef.current?.id === id) {
-        setActiveScript(null);
-      }
-      return updated;
-    });
+    setScriptNodes((prev) => deleteNode(prev, id));
+    if (activeScriptRef.current?.id === id) {
+      activeScriptRef.current = null;
+      setActiveScript(null);
+    }
   };
 
   const handleRenameNode = (id: string, name: string) => {
-    setScriptNodes((prev) => {
-      const updated = renameNode(prev, id, name);
-      // Update active script reference if it was renamed
-      if (activeScriptRef.current?.id === id) {
-        const node = updated.find((n) => n.id === id);
-        if (node) setActiveScript(node);
-      }
-      return updated;
-    });
+    setScriptNodes((prev) => renameNode(prev, id, name));
+    if (activeScriptRef.current?.id === id) {
+      const updated = { ...activeScriptRef.current, name };
+      activeScriptRef.current = updated;
+      setActiveScript(updated);
+    }
   };
 
   // --- Run/Clear ---
