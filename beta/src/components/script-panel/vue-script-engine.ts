@@ -102,9 +102,19 @@ export function mountUIScript(
     const apiOutput: string[] = [];
     const api = buildApi(ctx, apiOutput);
 
+    // Wrap write methods so every mutation immediately notifies the hex editor
+    const buf = api.buffer;
+    const reactiveBuffer = {
+      ...buf,
+      setByte(offset: number, value: number)    { buf.setByte(offset, value); onBufferModified(); },
+      setBytes(offset: number, bytes: number[]) { buf.setBytes(offset, bytes); onBufferModified(); },
+      setColor(offset: number, color: number)   { buf.setColor(offset, color); onBufferModified(); },
+      resize(newSize: number)                   { buf.resize(newSize); onBufferModified(); },
+    };
+
     const app = Vue.createApp({ ...componentOptions, render });
 
-    app.config.globalProperties.$buffer          = api.buffer;
+    app.config.globalProperties.$buffer          = reactiveBuffer;
     app.config.globalProperties.$cursor          = api.cursor;
     app.config.globalProperties.$selection       = api.selection;
     app.config.globalProperties.$print           = api.print;
