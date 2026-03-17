@@ -9,8 +9,9 @@ export interface ScriptNode {
   id: string;
   name: string;
   type: 'script' | 'folder';
-  parentId: string | null; // null = root level
-  code?: string;           // only for type === 'script'
+  scriptClass?: 'cli' | 'ui'; // only for type === 'script'; defaults to 'cli'
+  parentId: string | null;    // null = root level
+  code?: string;              // only for type === 'script'
   createdAt: number;
   updatedAt: number;
 }
@@ -45,11 +46,13 @@ export function createScript(
   name: string,
   parentId: string | null,
   code: string = '',
+  scriptClass: 'cli' | 'ui' = 'cli',
 ): { nodes: ScriptNode[]; script: ScriptNode } {
   const script: ScriptNode = {
     id: generateId(),
     name,
     type: 'script',
+    scriptClass,
     parentId,
     code,
     createdAt: Date.now(),

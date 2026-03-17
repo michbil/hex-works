@@ -35,6 +35,7 @@ import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { highlightSelectionMatches } from "@codemirror/search";
 import { useHexEditorStore } from "../../contexts/hex-editor-store";
 import { executeScript, executeAction, ScriptResult } from "./script-engine";
+import { mountUIScript, UIScriptHandle } from "./vue-script-engine";
 import { ScriptTree } from "./script-tree";
 import {
   ScriptNode,
@@ -46,6 +47,63 @@ import {
   deleteNode,
   getNodePath,
 } from "./script-storage";
+
+const DEFAULT_NEW_UI_SCRIPT = `<template>
+  <div class="hex-ui-script">
+    <h3>{{ title }}</h3>
+    <button @click="analyze">Analyze Buffer</button>
+    <pre>{{ output }}</pre>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      title: 'Buffer Analyzer',
+      output: 'Click Analyze to inspect the buffer.',
+    };
+  },
+  methods: {
+    analyze() {
+      const len = this.$buffer.length;
+      const count = Math.min(16, len);
+      const bytes = this.$buffer.getBytes(0, count);
+      const hex = bytes.map(b => b.toString(16).padStart(2, '0')).join(' ');
+      this.output = \`Size: \${len} bytes\\nFirst \${count} bytes: \${hex}\`;
+    },
+  },
+};
+</script>
+
+<style>
+.hex-ui-script {
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+  color: #d4d4d4;
+}
+h3 { margin: 0 0 12px; font-size: 14px; color: #cccccc; }
+button {
+  background: #2ea043;
+  color: white;
+  border: none;
+  padding: 5px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+button:hover { background: #3fb950; }
+pre {
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  margin-top: 12px;
+  color: #d4d4d4;
+}
+</style>
+`;
 
 const DEFAULT_NEW_SCRIPT = `// Available API:
 //   buffer.length, buffer.getByte(offset), buffer.setByte(offset, value)
@@ -79,6 +137,12 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   const [lastResult, setLastResult] = useState<ScriptResult | null>(null);
   const [exportedActions, setExportedActions] = useState<string[]>([]);
   const outputScrollRef = useRef<ScrollView>(null);
+
+  // UI script state
+  const uiContainerRef = useRef<HTMLDivElement | null>(null);
+  const uiHandleRef = useRef<UIScriptHandle | null>(null);
+  const [uiError, setUiError] = useState<string | null>(null);
+  const [uiRunning, setUiRunning] = useState(false);
 
   // Script library state
   const [scriptNodes, setScriptNodes] = useState<ScriptNode[]>(() =>
@@ -139,16 +203,23 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     view.focus();
   };
 
-  // Cleanup auto-save timer
+  // Cleanup auto-save timer and any mounted Vue app
   useEffect(() => {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      uiHandleRef.current?.unmount();
     };
   }, []);
 
   // --- Script library actions ---
 
   const handleSelectScript = (script: ScriptNode) => {
+    // Unmount Vue if leaving a UI script
+    uiHandleRef.current?.unmount();
+    uiHandleRef.current = null;
+    setUiError(null);
+    setUiRunning(false);
+
     // Flush pending save before switching
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
@@ -170,6 +241,21 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         "New Script",
         parentId,
         DEFAULT_NEW_SCRIPT,
+        "cli",
+      );
+      setActiveScript(result.script);
+      return result.nodes;
+    });
+  };
+
+  const handleCreateUIScript = (parentId: string | null) => {
+    setScriptNodes((prev) => {
+      const result = createScript(
+        prev,
+        "New UI Script",
+        parentId,
+        DEFAULT_NEW_UI_SCRIPT,
+        "ui",
       );
       setActiveScript(result.script);
       return result.nodes;
@@ -228,8 +314,42 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     }, 50);
   };
 
+  const handleRunUI = () => {
+    if (!viewRef.current || !buffer) return;
+    const code = viewRef.current.state.doc.toString();
+    const container = uiContainerRef.current;
+    if (!container) return;
+
+    // Unmount any previous Vue app
+    uiHandleRef.current?.unmount();
+    uiHandleRef.current = null;
+    setUiError(null);
+    setUiRunning(false);
+
+    // Clear container before remounting
+    container.innerHTML = '';
+
+    const { handle, error } = mountUIScript(
+      code,
+      container,
+      { buffer, cursorPosition, selection },
+      onBufferModified,
+    );
+
+    if (error) {
+      setUiError(error);
+    } else {
+      uiHandleRef.current = handle;
+      setUiRunning(true);
+    }
+  };
+
   const handleRun = () => {
     if (!viewRef.current || !buffer) return;
+    if (activeScript?.scriptClass === "ui") {
+      handleRunUI();
+      return;
+    }
     const code = viewRef.current.state.doc.toString();
     const result = executeScript(code, { buffer, cursorPosition, selection });
     const label = activeScript ? `Run [${activeScript.name}]` : "Run";
@@ -310,6 +430,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
               activeScriptId={activeScript?.id ?? null}
               onSelectScript={handleSelectScript}
               onCreateScript={handleCreateScript}
+              onCreateUIScript={handleCreateUIScript}
               onCreateFolder={handleCreateFolder}
               onDeleteNode={handleDeleteNode}
               onRenameNode={handleRenameNode}
@@ -334,64 +455,88 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                 />
               </View>
 
-              {/* Exported Actions Bar */}
-              {exportedActions.length > 0 && (
-                <View style={styles.actionsBar}>
-                  <Text style={styles.actionsLabel}>Actions:</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.actionsScroll}
-                  >
-                    {exportedActions.map((name) => (
-                      <TouchableOpacity
-                        key={name}
-                        style={styles.actionButton}
-                        onPress={() => handleRunAction(name)}
+              {activeScript.scriptClass === "ui" ? (
+                /* Vue UI Preview Pane */
+                <View style={styles.outputPane}>
+                  <View style={styles.outputHeader}>
+                    <Text style={styles.outputTitle}>UI Preview</Text>
+                    {uiRunning && !uiError && (
+                      <Text style={styles.outputSuccess}>Running</Text>
+                    )}
+                    {uiError && (
+                      <Text style={styles.outputError}>Error</Text>
+                    )}
+                  </View>
+                  <div
+                    ref={uiContainerRef}
+                    style={{ flex: 1, overflow: "auto", backgroundColor: "#1e1e1e" }}
+                  />
+                  {uiError && (
+                    <Text style={styles.uiErrorText}>{uiError}</Text>
+                  )}
+                </View>
+              ) : (
+                <>
+                  {/* Exported Actions Bar */}
+                  {exportedActions.length > 0 && (
+                    <View style={styles.actionsBar}>
+                      <Text style={styles.actionsLabel}>Actions:</Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.actionsScroll}
                       >
-                        <Text style={styles.actionButtonText}>
-                          {"\u25B6"} {name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+                        {exportedActions.map((name) => (
+                          <TouchableOpacity
+                            key={name}
+                            style={styles.actionButton}
+                            onPress={() => handleRunAction(name)}
+                          >
+                            <Text style={styles.actionButtonText}>
+                              {"\u25B6"} {name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
 
-              {/* Output Console */}
-              <View style={styles.outputPane}>
-                <View style={styles.outputHeader}>
-                  <Text style={styles.outputTitle}>Output</Text>
-                  {lastResult && !lastResult.error && (
-                    <Text style={styles.outputSuccess}>
-                      OK ({lastResult.duration.toFixed(1)}ms)
-                    </Text>
-                  )}
-                  {lastResult?.error && (
-                    <Text style={styles.outputError}>Error</Text>
-                  )}
-                </View>
-                <ScrollView ref={outputScrollRef} style={styles.outputScroll}>
-                  {output.map((line, i) => (
-                    <Text
-                      key={i}
-                      style={[
-                        styles.outputLine,
-                        line.startsWith("[ERROR]") && styles.outputLineError,
-                        line.startsWith("[WARN]") && styles.outputLineWarn,
-                        line.startsWith("---") && styles.outputLineSeparator,
-                      ]}
-                    >
-                      {line}
-                    </Text>
-                  ))}
-                  {output.length === 0 && (
-                    <Text style={styles.outputPlaceholder}>
-                      Script output will appear here. Click Run to execute.
-                    </Text>
-                  )}
-                </ScrollView>
-              </View>
+                  {/* Output Console */}
+                  <View style={styles.outputPane}>
+                    <View style={styles.outputHeader}>
+                      <Text style={styles.outputTitle}>Output</Text>
+                      {lastResult && !lastResult.error && (
+                        <Text style={styles.outputSuccess}>
+                          OK ({lastResult.duration.toFixed(1)}ms)
+                        </Text>
+                      )}
+                      {lastResult?.error && (
+                        <Text style={styles.outputError}>Error</Text>
+                      )}
+                    </View>
+                    <ScrollView ref={outputScrollRef} style={styles.outputScroll}>
+                      {output.map((line, i) => (
+                        <Text
+                          key={i}
+                          style={[
+                            styles.outputLine,
+                            line.startsWith("[ERROR]") && styles.outputLineError,
+                            line.startsWith("[WARN]") && styles.outputLineWarn,
+                            line.startsWith("---") && styles.outputLineSeparator,
+                          ]}
+                        >
+                          {line}
+                        </Text>
+                      ))}
+                      {output.length === 0 && (
+                        <Text style={styles.outputPlaceholder}>
+                          Script output will appear here. Click Run to execute.
+                        </Text>
+                      )}
+                    </ScrollView>
+                  </View>
+                </>
+              )}
             </View>
           ) : (
             <View style={styles.noScript}>
@@ -635,6 +780,13 @@ const styles = StyleSheet.create({
     color: "#999",
     fontSize: 14,
     padding: 20,
+  },
+  uiErrorText: {
+    color: "#f85149",
+    fontSize: 12,
+    fontFamily: "monospace",
+    padding: 8,
+    backgroundColor: "#1a1a1a",
   },
 });
 
