@@ -1,7 +1,7 @@
 /**
  * Script Panel - JavaScript scripting interface for the hex editor.
  * Uses CodeMirror 6 for syntax-highlighted JS editing.
- * Scripts are persisted to localStorage with hierarchical folder support.
+ * Scripts are loaded via a provider registry with lazy code loading.
  */
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
@@ -12,6 +12,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { EditorState } from "@codemirror/state";
 import {
@@ -37,18 +38,18 @@ import { useHexEditorStore } from "../../contexts/hex-editor-store";
 import { executeScript, executeAction, ScriptResult } from "./script-engine";
 import { mountUIScript, UIScriptHandle } from "./vue-script-engine";
 import { ScriptTree } from "./script-tree";
-import {
-  ScriptNode,
-  loadScriptNodes,
-  createScript,
-  createFolder,
-  updateScriptCode,
-  renameNode,
-  deleteNode,
-  getNodePath,
-} from "./script-storage";
+import { ScriptMeta, getNodePath } from "./script-provider";
+import { ScriptProviderRegistry } from "./script-provider-registry";
+import { LocalStorageProvider } from "./local-storage-provider";
+import { BuiltinProvider } from "./builtin-provider";
 import { DEFAULT_NEW_SCRIPT, DEFAULT_NEW_UI_SCRIPT } from "./script-templates";
 
+/** Module-level singleton registry */
+const registry = new ScriptProviderRegistry();
+registry.register(new LocalStorageProvider());
+registry.register(new BuiltinProvider());
+
+const WRITABLE_PROVIDER = 'localStorage';
 
 interface ScriptPanelProps {
   onClose: () => void;
@@ -70,16 +71,21 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   const [uiError, setUiError] = useState<string | null>(null);
   const [uiRunning, setUiRunning] = useState(false);
 
-  // Script library state
-  const [scriptNodes, setScriptNodes] = useState<ScriptNode[]>(() =>
-    loadScriptNodes(),
-  );
-  const [activeScript, setActiveScript] = useState<ScriptNode | null>(null);
+  // Script library state — metas only, no code bodies
+  const [scriptMetas, setScriptMetas] = useState<ScriptMeta[]>([]);
+  const [activeScript, setActiveScript] = useState<ScriptMeta | null>(null);
+  const [activeCode, setActiveCode] = useState<string | null>(null);
+  const [codeLoading, setCodeLoading] = useState(false);
   const [showTree, setShowTree] = useState(true);
-  const activeScriptRef = useRef<ScriptNode | null>(null);
+  const activeScriptRef = useRef<ScriptMeta | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { buffer, cursorPosition, selection } = useHexEditorStore();
+
+  // Load metas from all providers on mount
+  useEffect(() => {
+    registry.loadAllMetas().then(setScriptMetas);
+  }, []);
 
   // Keep ref in sync
   useEffect(() => {
@@ -87,7 +93,6 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   }, [activeScript]);
 
   // Auto-save callback ref — called by CodeMirror on doc change.
-  // Using a ref so the extensions array (built once) always calls the latest closure.
   const onChangeRef = useRef(() => {});
   useEffect(() => {
     onChangeRef.current = () => {
@@ -95,9 +100,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       autoSaveTimerRef.current = setTimeout(() => {
         const script = activeScriptRef.current;
         const view = viewRef.current;
-        if (script && view) {
+        if (script && view && !script.readOnly) {
           const code = view.state.doc.toString();
-          setScriptNodes((prev) => updateScriptCode(prev, script.id, code));
+          registry.saveCode(script, code).catch(console.error);
         }
       }, 500);
     };
@@ -109,9 +114,6 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   );
 
   // Ref callback: create/destroy CodeMirror when the div mounts/unmounts.
-  // Using key={activeScript.id} on the div ensures this runs on each script switch.
-  // Must be stable (useCallback) so React doesn't re-invoke it on every render,
-  // which would tear down and recreate the editor (and steal focus) on each store update.
   const editorRefCallback = useCallback((el: HTMLDivElement | null) => {
     if (viewRef.current) {
       viewRef.current.destroy();
@@ -120,16 +122,18 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     editorRef.current = el;
     if (!el || Platform.OS !== "web") return;
 
-    const code = activeScriptRef.current?.code ?? "";
+    const code = activeCode ?? "";
     const state = EditorState.create({
       doc: code,
-      extensions,
+      extensions: [
+        ...extensions,
+        ...(activeScriptRef.current?.readOnly ? [EditorView.editable.of(false)] : []),
+      ],
     });
     const view = new EditorView({ state, parent: el });
     viewRef.current = view;
-    // Focus the editor so it's immediately typeable
     view.focus();
-  }, [extensions]);
+  }, [extensions, activeCode]);
 
   // Cleanup auto-save timer and any mounted Vue app
   useEffect(() => {
@@ -139,11 +143,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     };
   }, []);
 
-  // Auto-mount Vue when a UI script becomes active.
-  // Depends only on activeScript.id so we mount once on selection,
-  // not on every cursor/buffer change.
+  // Auto-mount Vue when a UI script becomes active and code is loaded.
   useEffect(() => {
-    if (activeScript?.scriptClass !== "ui" || !buffer) return;
+    if (activeScript?.scriptClass !== "ui" || !buffer || activeCode == null) return;
     const container = uiContainerRef.current;
     if (!container) return;
 
@@ -153,8 +155,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     setUiError(null);
     setUiRunning(false);
 
-    // Use editor content (which equals saved code on open, or unsaved edits if any)
-    const code = viewRef.current?.state.doc.toString() ?? activeScript.code ?? "";
+    const code = viewRef.current?.state.doc.toString() ?? activeCode;
     const { handle, error } = mountUIScript(
       code,
       container,
@@ -174,68 +175,90 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       uiHandleRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeScript?.id]); // intentionally omit buffer/cursor/selection — Run button handles reruns
+  }, [activeScript?.id, activeCode]); // remount when code finishes loading
 
   // --- Script library actions ---
 
-  const handleSelectScript = (script: ScriptNode) => {
+  /** Flush pending auto-save for the current script */
+  const flushAutoSave = async () => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+      const prevScript = activeScriptRef.current;
+      const view = viewRef.current;
+      if (prevScript && view && !prevScript.readOnly) {
+        const code = view.state.doc.toString();
+        await registry.saveCode(prevScript, code);
+      }
+    }
+  };
+
+  const handleSelectScript = async (script: ScriptMeta) => {
     // Unmount Vue if leaving a UI script
     uiHandleRef.current?.unmount();
     uiHandleRef.current = null;
     setUiError(null);
     setUiRunning(false);
 
-    // Flush pending save before switching
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = null;
-      const prevScript = activeScriptRef.current;
-      const view = viewRef.current;
-      if (prevScript && view) {
-        const code = view.state.doc.toString();
-        setScriptNodes((prev) => updateScriptCode(prev, prevScript.id, code));
-      }
-    }
-    // Update ref synchronously so editorRefCallback reads the correct script
-    // when it fires during the commit phase (before useEffect runs).
+    await flushAutoSave();
+
+    // Set meta immediately, code loads async
     activeScriptRef.current = script;
     setActiveScript(script);
+    setActiveCode(null);
+    setCodeLoading(true);
+
+    const code = await registry.loadCode(script);
+    // Guard against rapid switching: only apply if this script is still active
+    if (activeScriptRef.current?.id === script.id) {
+      setActiveCode(code);
+      setCodeLoading(false);
+    }
   };
 
-  const handleCreateScript = (parentId: string | null) => {
-    const result = createScript(
-      scriptNodes,
+  const handleCreateScript = async (parentId: string | null) => {
+    const meta = await registry.createScript(
+      WRITABLE_PROVIDER,
       "New Script",
       parentId,
       DEFAULT_NEW_SCRIPT,
       "cli",
     );
-    setScriptNodes(result.nodes);
-    activeScriptRef.current = result.script;
-    setActiveScript(result.script);
+    setScriptMetas(prev => [...prev, meta]);
+    activeScriptRef.current = meta;
+    setActiveScript(meta);
+    setActiveCode(DEFAULT_NEW_SCRIPT);
+    setCodeLoading(false);
   };
 
-  const handleCreateUIScript = (parentId: string | null) => {
-    const result = createScript(
-      scriptNodes,
+  const handleCreateUIScript = async (parentId: string | null) => {
+    const meta = await registry.createScript(
+      WRITABLE_PROVIDER,
       "New UI Script",
       parentId,
       DEFAULT_NEW_UI_SCRIPT,
       "ui",
     );
-    setScriptNodes(result.nodes);
-    activeScriptRef.current = result.script;
-    setActiveScript(result.script);
+    setScriptMetas(prev => [...prev, meta]);
+    activeScriptRef.current = meta;
+    setActiveScript(meta);
+    setActiveCode(DEFAULT_NEW_UI_SCRIPT);
+    setCodeLoading(false);
   };
 
-  const handleCreateFolder = (parentId: string | null) => {
-    setScriptNodes((prev) => {
-      const result = createFolder(prev, "New Folder", parentId);
-      return result.nodes;
-    });
+  const handleCreateFolder = async (parentId: string | null) => {
+    const meta = await registry.createFolder(
+      WRITABLE_PROVIDER,
+      "New Folder",
+      parentId,
+    );
+    setScriptMetas(prev => [...prev, meta]);
   };
 
-  const handleDeleteNode = (id: string) => {
+  const handleDeleteNode = async (id: string) => {
+    const meta = scriptMetas.find(m => m.id === id);
+    if (!meta) return;
+
     if (activeScriptRef.current?.id === id) {
       // Unmount Vue app before React removes the container element
       uiHandleRef.current?.unmount();
@@ -244,12 +267,23 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       setUiRunning(false);
       activeScriptRef.current = null;
       setActiveScript(null);
+      setActiveCode(null);
     }
-    setScriptNodes((prev) => deleteNode(prev, id));
+
+    await registry.deleteNode(meta);
+    // Reload metas to account for cascading deletes (folders with children)
+    const metas = await registry.loadAllMetas();
+    setScriptMetas(metas);
   };
 
-  const handleRenameNode = (id: string, name: string) => {
-    setScriptNodes((prev) => renameNode(prev, id, name));
+  const handleRenameNode = async (id: string, name: string) => {
+    const meta = scriptMetas.find(m => m.id === id);
+    if (!meta) return;
+
+    await registry.renameNode(meta, name);
+    setScriptMetas(prev =>
+      prev.map(m => m.id === id ? { ...m, name, updatedAt: Date.now() } : m),
+    );
     if (activeScriptRef.current?.id === id) {
       const updated = { ...activeScriptRef.current, name };
       activeScriptRef.current = updated;
@@ -285,13 +319,10 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     const container = uiContainerRef.current;
     if (!container) return;
 
-    // Unmount any previous Vue app
     uiHandleRef.current?.unmount();
     uiHandleRef.current = null;
     setUiError(null);
     setUiRunning(false);
-
-    // Clear container before remounting
     container.innerHTML = '';
 
     const { handle, error } = mountUIScript(
@@ -350,6 +381,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     );
   }
 
+  // Show editor only when code has been loaded
+  const editorReady = activeScript && activeCode != null && !codeLoading;
+
   return (
     <View style={styles.container}>
       {/* Toolbar */}
@@ -362,17 +396,17 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         </TouchableOpacity>
         <Text style={styles.toolbarTitle} numberOfLines={1}>
           {activeScript
-            ? getNodePath(scriptNodes, activeScript.id)
+            ? getNodePath(scriptMetas, activeScript.id)
             : "Script Editor"}
         </Text>
         <View style={styles.toolbarButtons}>
           <TouchableOpacity
             style={[
               styles.runButton,
-              (!buffer || !activeScript) && styles.buttonDisabled,
+              (!buffer || !editorReady) && styles.buttonDisabled,
             ]}
             onPress={handleRun}
-            disabled={!buffer || !activeScript}
+            disabled={!buffer || !editorReady}
           >
             <Text style={styles.runButtonText}>{"\u25B6"} Run</Text>
           </TouchableOpacity>
@@ -391,7 +425,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         {showTree && (
           <View style={styles.treeSidebar}>
             <ScriptTree
-              nodes={scriptNodes}
+              nodes={scriptMetas}
               activeScriptId={activeScript?.id ?? null}
               onSelectScript={handleSelectScript}
               onCreateScript={handleCreateScript}
@@ -405,7 +439,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
 
         {/* Editor + Output */}
         <View style={styles.editorArea}>
-          {activeScript ? (
+          {editorReady ? (
             <View style={styles.splitView}>
               {/* CodeMirror Editor */}
               <View style={styles.editorPane}>
@@ -502,6 +536,11 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                   </View>
                 </>
               )}
+            </View>
+          ) : activeScript && codeLoading ? (
+            <View style={styles.noScript}>
+              <ActivityIndicator color="#cccccc" />
+              <Text style={styles.noScriptText}>Loading script...</Text>
             </View>
           ) : (
             <View style={styles.noScript}>
@@ -736,6 +775,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#1e1e1e",
+    gap: 8,
   },
   noScriptText: {
     color: "#6e7681",
