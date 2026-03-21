@@ -48,6 +48,7 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
   const tabs = useHexEditorStore((s) => s.tabs);
   const setCursorPosition = useHexEditorStore((s) => s.setCursorPosition);
   const setSelection = useHexEditorStore((s) => s.setSelection);
+  const updateHeatmap = useHexEditorStore((s) => s.updateHeatmap);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedOffset, setSelectedOffset] = useState<number | null>(null);
@@ -69,6 +70,15 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
     () => Math.max(1, ...diffData.map((d) => d.changeCount)),
     [diffData],
   );
+
+  // Push comparison data to store so hex-view can render inline heatmap
+  useEffect(() => {
+    updateHeatmap();
+    return () => {
+      // Clear heatmap when panel unmounts
+      useHexEditorStore.setState({ heatmapData: null });
+    };
+  }, [tabs, updateHeatmap]);
 
   // Filtered list for the table
   const filteredEntries = useMemo(() => {
