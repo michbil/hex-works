@@ -201,6 +201,57 @@ export class BinaryBuffer {
     }
   }
 
+  /**
+   * Compare multiple buffers and produce per-address statistics.
+   * Returns an array (one entry per byte offset up to maxLen) with:
+   *  - uniqueValues: count of distinct byte values at that address
+   *  - min / max: byte value range
+   *  - values: array of the actual byte value in each buffer
+   *  - changeCount: how many buffers differ from the first buffer
+   */
+  static compareMultiple(
+    buffers: BinaryBuffer[],
+  ): {
+    uniqueValues: number;
+    min: number;
+    max: number;
+    values: number[];
+    changeCount: number;
+  }[] {
+    if (buffers.length === 0) return [];
+    const maxLen = Math.max(...buffers.map((b) => b.length));
+    const result: {
+      uniqueValues: number;
+      min: number;
+      max: number;
+      values: number[];
+      changeCount: number;
+    }[] = new Array(maxLen);
+
+    for (let i = 0; i < maxLen; i++) {
+      let min = 0xff;
+      let max = 0x00;
+      const seen = new Set<number>();
+      const values: number[] = [];
+      let changeCount = 0;
+      const firstVal = i < buffers[0].length ? buffers[0].data[i] : -1;
+
+      for (let b = 0; b < buffers.length; b++) {
+        const val = i < buffers[b].length ? buffers[b].data[i] : -1;
+        values.push(val);
+        if (val >= 0) {
+          seen.add(val);
+          if (val < min) min = val;
+          if (val > max) max = val;
+          if (b > 0 && val !== firstVal) changeCount++;
+        }
+      }
+
+      result[i] = { uniqueValues: seen.size, min, max, values, changeCount };
+    }
+    return result;
+  }
+
   // Swap adjacent bytes
   swapBytes(): void {
     let len = this.data.length;
