@@ -321,7 +321,7 @@ export function HexView({
     // Pass 1: Draw blurred heatmap backgrounds (when comparison data exists)
     if (heatmapData && heatmapData.length > 0) {
       ctx.save();
-      ctx.filter = 'blur(3px)';
+      ctx.filter = 'blur(8px)';
       for (let row = 0; row < visibleRows; row++) {
         const lineOffset = (startLine + row) * bytesPerLine;
         if (lineOffset >= bufferLength) break;
