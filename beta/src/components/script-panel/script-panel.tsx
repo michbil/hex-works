@@ -40,9 +40,9 @@ import { mountUIScript, UIScriptHandle } from "./vue-script-engine";
 import { ScriptTree } from "./script-tree";
 import { ScriptMeta, getNodePath } from "./providers/script-provider";
 import { ScriptProviderRegistry } from "./providers/script-provider-registry";
-import { LocalStorageProvider } from "./providers/local-storage-provider";
-import { BuiltinProvider } from "./providers/builtin-provider";
-import { DEFAULT_NEW_SCRIPT, DEFAULT_NEW_UI_SCRIPT } from "./script-templates";
+import { LocalStorageProvider } from "./providers/localstorage/local-storage-provider";
+import { BuiltinProvider } from "./providers/builtin/builtin-provider";
+import { DEFAULT_NEW_SCRIPT, DEFAULT_NEW_UI_SCRIPT } from "./providers/builtin/builtin-script-templates";
 
 /** Module-level singleton registry */
 const registry = new ScriptProviderRegistry();

@@ -5,8 +5,8 @@
  * can browse them without polluting localStorage.
  */
 
-import type { ScriptProvider, ScriptMeta } from './script-provider';
-import { DEFAULT_NEW_SCRIPT, DEFAULT_NEW_UI_SCRIPT } from './script-templates';
+import type { ScriptProvider, ScriptMeta } from '../script-provider';
+import { DEFAULT_NEW_SCRIPT, DEFAULT_NEW_UI_SCRIPT } from './builtin-script-templates';
 
 const PROVIDER_ID = 'builtins';
 const FOLDER_ID = 'builtins_examples';

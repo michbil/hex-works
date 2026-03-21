@@ -6,7 +6,7 @@
  * the lightweight metas are kept in React state.
  */
 
-import type { ScriptProvider, ScriptMeta } from './script-provider';
+import type { ScriptProvider, ScriptMeta } from '../script-provider';
 
 const STORAGE_KEY = 'hexworks_scripts';
 const PROVIDER_ID = 'localStorage';
