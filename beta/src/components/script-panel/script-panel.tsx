@@ -38,10 +38,10 @@ import { useHexEditorStore } from "../../contexts/hex-editor-store";
 import { executeScript, executeAction, ScriptResult } from "./script-engine";
 import { mountUIScript, UIScriptHandle } from "./vue-script-engine";
 import { ScriptTree } from "./script-tree";
-import { ScriptMeta, getNodePath } from "./script-provider";
-import { ScriptProviderRegistry } from "./script-provider-registry";
-import { LocalStorageProvider } from "./local-storage-provider";
-import { BuiltinProvider } from "./builtin-provider";
+import { ScriptMeta, getNodePath } from "./providers/script-provider";
+import { ScriptProviderRegistry } from "./providers/script-provider-registry";
+import { LocalStorageProvider } from "./providers/local-storage-provider";
+import { BuiltinProvider } from "./providers/builtin-provider";
 import { DEFAULT_NEW_SCRIPT, DEFAULT_NEW_UI_SCRIPT } from "./script-templates";
 
 /** Module-level singleton registry */

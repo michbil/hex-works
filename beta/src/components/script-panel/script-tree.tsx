@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { ScriptMeta, getChildren } from './script-provider';
+import { ScriptMeta, getChildren } from './providers/script-provider';
 
 interface ScriptTreeProps {
   nodes: ScriptMeta[];
