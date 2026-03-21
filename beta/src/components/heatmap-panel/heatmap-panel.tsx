@@ -37,13 +37,14 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
   const updateHeatmap = useHexEditorStore((s) => s.updateHeatmap);
   const changeCounts = useHexEditorStore((s) => s.heatmapChangeCounts);
   const maxChanges = useHexEditorStore((s) => s.heatmapMaxChanges);
+  const bytesPerLine = useHexEditorStore((s) => s.bytesPerLine);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedOffset, setSelectedOffset] = useState<number | null>(null);
   const [hoveredOffset, setHoveredOffset] = useState<number | null>(null);
 
-  // Cell sizing
-  const cellSize = 6;
+  // Fixed columns matching hex dump layout
+  const cols = bytesPerLine;
   const cellGap = 1;
 
   const dataLength = changeCounts?.length ?? 0;
@@ -80,11 +81,13 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
     if (!canvas || !changeCounts || dataLength === 0) return;
 
     const containerWidth = canvas.parentElement?.clientWidth ?? 300;
-    const cols = Math.max(1, Math.floor(containerWidth / (cellSize + cellGap)));
+    // Size cells to fill container width with fixed column count
+    const cellSize = Math.max(2, Math.floor((containerWidth - cols * cellGap) / cols));
+    const step = cellSize + cellGap;
     const rows = Math.ceil(dataLength / cols);
 
-    canvas.width = cols * (cellSize + cellGap);
-    canvas.height = rows * (cellSize + cellGap);
+    canvas.width = cols * step;
+    canvas.height = rows * step;
     canvas.style.width = `${canvas.width}px`;
     canvas.style.height = `${canvas.height}px`;
 
@@ -103,8 +106,8 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
     for (let i = 0; i < dataLength; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = col * (cellSize + cellGap);
-      const y = row * (cellSize + cellGap);
+      const x = col * step;
+      const y = row * step;
 
       ctx.fillStyle = colorLUT[changeCounts[i]];
       ctx.fillRect(x, y, cellSize, cellSize);
@@ -115,11 +118,18 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
         ctx.strokeRect(x - 0.5, y - 0.5, cellSize + 1, cellSize + 1);
       }
     }
-  }, [changeCounts, dataLength, maxChanges, selectedOffset, cellSize, cellGap]);
+  }, [changeCounts, dataLength, maxChanges, selectedOffset, cols, cellGap]);
 
   useEffect(() => {
     drawHeatmap();
   }, [drawHeatmap]);
+
+  // Derive cell step from canvas width and fixed cols
+  const getStep = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || cols === 0) return cellGap + 2;
+    return canvas.width / cols;
+  }, [cols, cellGap]);
 
   // Handle canvas click
   const handleCanvasClick = useCallback(
@@ -129,16 +139,16 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const cols = Math.max(1, Math.floor(canvas.width / (cellSize + cellGap)));
-      const col = Math.floor(x / (cellSize + cellGap));
-      const row = Math.floor(y / (cellSize + cellGap));
+      const step = getStep();
+      const col = Math.floor(x / step);
+      const row = Math.floor(y / step);
       const offset = row * cols + col;
       if (offset >= 0 && offset < dataLength) {
         setSelectedOffset(offset);
         setCursorPosition(offset);
       }
     },
-    [dataLength, cellSize, cellGap, setCursorPosition],
+    [dataLength, cols, getStep, setCursorPosition],
   );
 
   const handleCanvasMove = useCallback(
@@ -148,9 +158,9 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const cols = Math.max(1, Math.floor(canvas.width / (cellSize + cellGap)));
-      const col = Math.floor(x / (cellSize + cellGap));
-      const row = Math.floor(y / (cellSize + cellGap));
+      const step = getStep();
+      const col = Math.floor(x / step);
+      const row = Math.floor(y / step);
       const offset = row * cols + col;
       if (offset >= 0 && offset < dataLength) {
         setHoveredOffset(offset);
@@ -158,7 +168,7 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
         setHoveredOffset(null);
       }
     },
-    [dataLength, cellSize, cellGap],
+    [dataLength, cols, getStep],
   );
 
   const goToOffset = useCallback(
