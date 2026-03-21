@@ -1,0 +1,30 @@
+name: PR Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Remove preview directory
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          if [ -d "pr/$PR_NUM" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git rm -rf "pr/$PR_NUM"
+            git commit -m "Remove PR #$PR_NUM preview"
+            git push
+          else
+            echo "No preview directory found for PR #$PR_NUM"
+          fi
