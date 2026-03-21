@@ -1,10 +1,10 @@
 /**
  * Script Panel - JavaScript scripting interface for the hex editor.
  * Uses CodeMirror 6 for syntax-highlighted JS editing.
- * Scripts are persisted to localStorage with hierarchical folder support.
+ * Scripts are loaded via a provider registry with lazy code loading.
  */
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { EditorState } from "@codemirror/state";
 import {
@@ -35,36 +36,20 @@ import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { highlightSelectionMatches } from "@codemirror/search";
 import { useHexEditorStore } from "../../contexts/hex-editor-store";
 import { executeScript, executeAction, ScriptResult } from "./script-engine";
+import { mountUIScript, UIScriptHandle } from "./vue-script-engine";
 import { ScriptTree } from "./script-tree";
-import {
-  ScriptNode,
-  loadScriptNodes,
-  createScript,
-  createFolder,
-  updateScriptCode,
-  renameNode,
-  deleteNode,
-  getNodePath,
-} from "./script-storage";
+import { ScriptMeta, getNodePath } from "./providers/script-provider";
+import { ScriptProviderRegistry } from "./providers/script-provider-registry";
+import { LocalStorageProvider } from "./providers/localstorage/local-storage-provider";
+import { BuiltinProvider } from "./providers/builtin/builtin-provider";
+import { DEFAULT_NEW_SCRIPT, DEFAULT_NEW_UI_SCRIPT } from "./providers/builtin/builtin-script-templates";
 
-const DEFAULT_NEW_SCRIPT = `// Available API:
-//   buffer.length, buffer.getByte(offset), buffer.setByte(offset, value)
-//   buffer.getBytes(offset, length), buffer.setBytes(offset, bytes)
-//   buffer.toHex(offset?, length?), buffer.toAscii(offset?, length?)
-//   buffer.resize(newSize)
-//   cursor, selection.start, selection.end, selection.length
-//   print(...args), hexdump(offset?, length?)
-//   console.log/warn/error
-//
-// Export named actions (click Run first to discover them):
-//   exports.myAction = function() { ... };
+/** Module-level singleton registry */
+const registry = new ScriptProviderRegistry();
+registry.register(new LocalStorageProvider());
+registry.register(new BuiltinProvider());
 
-print("Buffer size:", buffer.length);
-
-exports.dump = function() {
-  hexdump(0, Math.min(64, buffer.length));
-};
-`;
+const WRITABLE_PROVIDER = 'localStorage';
 
 interface ScriptPanelProps {
   onClose: () => void;
@@ -80,16 +65,27 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   const [exportedActions, setExportedActions] = useState<string[]>([]);
   const outputScrollRef = useRef<ScrollView>(null);
 
-  // Script library state
-  const [scriptNodes, setScriptNodes] = useState<ScriptNode[]>(() =>
-    loadScriptNodes(),
-  );
-  const [activeScript, setActiveScript] = useState<ScriptNode | null>(null);
+  // UI script state
+  const uiContainerRef = useRef<HTMLDivElement | null>(null);
+  const uiHandleRef = useRef<UIScriptHandle | null>(null);
+  const [uiError, setUiError] = useState<string | null>(null);
+  const [uiRunning, setUiRunning] = useState(false);
+
+  // Script library state — metas only, no code bodies
+  const [scriptMetas, setScriptMetas] = useState<ScriptMeta[]>([]);
+  const [activeScript, setActiveScript] = useState<ScriptMeta | null>(null);
+  const [activeCode, setActiveCode] = useState<string | null>(null);
+  const [codeLoading, setCodeLoading] = useState(false);
   const [showTree, setShowTree] = useState(true);
-  const activeScriptRef = useRef<ScriptNode | null>(null);
+  const activeScriptRef = useRef<ScriptMeta | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { buffer, cursorPosition, selection } = useHexEditorStore();
+
+  // Load metas from all providers on mount
+  useEffect(() => {
+    registry.loadAllMetas().then(setScriptMetas);
+  }, []);
 
   // Keep ref in sync
   useEffect(() => {
@@ -97,7 +93,6 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   }, [activeScript]);
 
   // Auto-save callback ref — called by CodeMirror on doc change.
-  // Using a ref so the extensions array (built once) always calls the latest closure.
   const onChangeRef = useRef(() => {});
   useEffect(() => {
     onChangeRef.current = () => {
@@ -105,9 +100,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       autoSaveTimerRef.current = setTimeout(() => {
         const script = activeScriptRef.current;
         const view = viewRef.current;
-        if (script && view) {
+        if (script && view && !script.readOnly) {
           const code = view.state.doc.toString();
-          setScriptNodes((prev) => updateScriptCode(prev, script.id, code));
+          registry.saveCode(script, code).catch(console.error);
         }
       }, 500);
     };
@@ -119,8 +114,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   );
 
   // Ref callback: create/destroy CodeMirror when the div mounts/unmounts.
-  // Using key={activeScript.id} on the div ensures this runs on each script switch.
-  const editorRefCallback = (el: HTMLDivElement | null) => {
+  const editorRefCallback = useCallback((el: HTMLDivElement | null) => {
     if (viewRef.current) {
       viewRef.current.destroy();
       viewRef.current = null;
@@ -128,82 +122,173 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     editorRef.current = el;
     if (!el || Platform.OS !== "web") return;
 
-    const code = activeScriptRef.current?.code ?? "";
+    const code = activeCode ?? "";
     const state = EditorState.create({
       doc: code,
-      extensions,
+      extensions: [
+        ...extensions,
+        ...(activeScriptRef.current?.readOnly ? [EditorView.editable.of(false)] : []),
+      ],
     });
     const view = new EditorView({ state, parent: el });
     viewRef.current = view;
-    // Focus the editor so it's immediately typeable
     view.focus();
-  };
+  }, [extensions, activeCode]);
 
-  // Cleanup auto-save timer
+  // Cleanup auto-save timer and any mounted Vue app
   useEffect(() => {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      uiHandleRef.current?.unmount();
     };
   }, []);
 
+  // Auto-mount Vue when a UI script becomes active and code is loaded.
+  useEffect(() => {
+    if (activeScript?.scriptClass !== "ui" || !buffer || activeCode == null) return;
+    const container = uiContainerRef.current;
+    if (!container) return;
+
+    uiHandleRef.current?.unmount();
+    uiHandleRef.current = null;
+    container.innerHTML = "";
+    setUiError(null);
+    setUiRunning(false);
+
+    const code = viewRef.current?.state.doc.toString() ?? activeCode;
+    const { handle, error } = mountUIScript(
+      code,
+      container,
+      { buffer, cursorPosition, selection },
+      onBufferModified,
+    );
+
+    if (error) {
+      setUiError(error);
+    } else {
+      uiHandleRef.current = handle;
+      setUiRunning(true);
+    }
+
+    return () => {
+      uiHandleRef.current?.unmount();
+      uiHandleRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScript?.id, activeCode]); // remount when code finishes loading
+
   // --- Script library actions ---
 
-  const handleSelectScript = (script: ScriptNode) => {
-    // Flush pending save before switching
+  /** Flush pending auto-save for the current script */
+  const flushAutoSave = async () => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
       const prevScript = activeScriptRef.current;
       const view = viewRef.current;
-      if (prevScript && view) {
+      if (prevScript && view && !prevScript.readOnly) {
         const code = view.state.doc.toString();
-        setScriptNodes((prev) => updateScriptCode(prev, prevScript.id, code));
+        await registry.saveCode(prevScript, code);
       }
     }
+  };
+
+  const handleSelectScript = async (script: ScriptMeta) => {
+    // Unmount Vue if leaving a UI script
+    uiHandleRef.current?.unmount();
+    uiHandleRef.current = null;
+    setUiError(null);
+    setUiRunning(false);
+
+    await flushAutoSave();
+
+    // Set meta immediately, code loads async
+    activeScriptRef.current = script;
     setActiveScript(script);
+    setActiveCode(null);
+    setCodeLoading(true);
+
+    const code = await registry.loadCode(script);
+    // Guard against rapid switching: only apply if this script is still active
+    if (activeScriptRef.current?.id === script.id) {
+      setActiveCode(code);
+      setCodeLoading(false);
+    }
   };
 
-  const handleCreateScript = (parentId: string | null) => {
-    setScriptNodes((prev) => {
-      const result = createScript(
-        prev,
-        "New Script",
-        parentId,
-        DEFAULT_NEW_SCRIPT,
-      );
-      setActiveScript(result.script);
-      return result.nodes;
-    });
+  const handleCreateScript = async (parentId: string | null) => {
+    const meta = await registry.createScript(
+      WRITABLE_PROVIDER,
+      "New Script",
+      parentId,
+      DEFAULT_NEW_SCRIPT,
+      "cli",
+    );
+    setScriptMetas(prev => [...prev, meta]);
+    activeScriptRef.current = meta;
+    setActiveScript(meta);
+    setActiveCode(DEFAULT_NEW_SCRIPT);
+    setCodeLoading(false);
   };
 
-  const handleCreateFolder = (parentId: string | null) => {
-    setScriptNodes((prev) => {
-      const result = createFolder(prev, "New Folder", parentId);
-      return result.nodes;
-    });
+  const handleCreateUIScript = async (parentId: string | null) => {
+    const meta = await registry.createScript(
+      WRITABLE_PROVIDER,
+      "New UI Script",
+      parentId,
+      DEFAULT_NEW_UI_SCRIPT,
+      "ui",
+    );
+    setScriptMetas(prev => [...prev, meta]);
+    activeScriptRef.current = meta;
+    setActiveScript(meta);
+    setActiveCode(DEFAULT_NEW_UI_SCRIPT);
+    setCodeLoading(false);
   };
 
-  const handleDeleteNode = (id: string) => {
-    setScriptNodes((prev) => {
-      const updated = deleteNode(prev, id);
-      // If deleted the active script, clear editor
-      if (activeScriptRef.current?.id === id) {
-        setActiveScript(null);
-      }
-      return updated;
-    });
+  const handleCreateFolder = async (parentId: string | null) => {
+    const meta = await registry.createFolder(
+      WRITABLE_PROVIDER,
+      "New Folder",
+      parentId,
+    );
+    setScriptMetas(prev => [...prev, meta]);
   };
 
-  const handleRenameNode = (id: string, name: string) => {
-    setScriptNodes((prev) => {
-      const updated = renameNode(prev, id, name);
-      // Update active script reference if it was renamed
-      if (activeScriptRef.current?.id === id) {
-        const node = updated.find((n) => n.id === id);
-        if (node) setActiveScript(node);
-      }
-      return updated;
-    });
+  const handleDeleteNode = async (id: string) => {
+    const meta = scriptMetas.find(m => m.id === id);
+    if (!meta) return;
+
+    if (activeScriptRef.current?.id === id) {
+      // Unmount Vue app before React removes the container element
+      uiHandleRef.current?.unmount();
+      uiHandleRef.current = null;
+      setUiError(null);
+      setUiRunning(false);
+      activeScriptRef.current = null;
+      setActiveScript(null);
+      setActiveCode(null);
+    }
+
+    await registry.deleteNode(meta);
+    // Reload metas to account for cascading deletes (folders with children)
+    const metas = await registry.loadAllMetas();
+    setScriptMetas(metas);
+  };
+
+  const handleRenameNode = async (id: string, name: string) => {
+    const meta = scriptMetas.find(m => m.id === id);
+    if (!meta) return;
+
+    await registry.renameNode(meta, name);
+    setScriptMetas(prev =>
+      prev.map(m => m.id === id ? { ...m, name, updatedAt: Date.now() } : m),
+    );
+    if (activeScriptRef.current?.id === id) {
+      const updated = { ...activeScriptRef.current, name };
+      activeScriptRef.current = updated;
+      setActiveScript(updated);
+    }
   };
 
   // --- Run/Clear ---
@@ -228,8 +313,39 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     }, 50);
   };
 
+  const handleRunUI = () => {
+    if (!viewRef.current || !buffer) return;
+    const code = viewRef.current.state.doc.toString();
+    const container = uiContainerRef.current;
+    if (!container) return;
+
+    uiHandleRef.current?.unmount();
+    uiHandleRef.current = null;
+    setUiError(null);
+    setUiRunning(false);
+    container.innerHTML = '';
+
+    const { handle, error } = mountUIScript(
+      code,
+      container,
+      { buffer, cursorPosition, selection },
+      onBufferModified,
+    );
+
+    if (error) {
+      setUiError(error);
+    } else {
+      uiHandleRef.current = handle;
+      setUiRunning(true);
+    }
+  };
+
   const handleRun = () => {
     if (!viewRef.current || !buffer) return;
+    if (activeScript?.scriptClass === "ui") {
+      handleRunUI();
+      return;
+    }
     const code = viewRef.current.state.doc.toString();
     const result = executeScript(code, { buffer, cursorPosition, selection });
     const label = activeScript ? `Run [${activeScript.name}]` : "Run";
@@ -265,6 +381,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     );
   }
 
+  // Show editor only when code has been loaded
+  const editorReady = activeScript && activeCode != null && !codeLoading;
+
   return (
     <View style={styles.container}>
       {/* Toolbar */}
@@ -277,17 +396,17 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         </TouchableOpacity>
         <Text style={styles.toolbarTitle} numberOfLines={1}>
           {activeScript
-            ? getNodePath(scriptNodes, activeScript.id)
+            ? getNodePath(scriptMetas, activeScript.id)
             : "Script Editor"}
         </Text>
         <View style={styles.toolbarButtons}>
           <TouchableOpacity
             style={[
               styles.runButton,
-              (!buffer || !activeScript) && styles.buttonDisabled,
+              (!buffer || !editorReady) && styles.buttonDisabled,
             ]}
             onPress={handleRun}
-            disabled={!buffer || !activeScript}
+            disabled={!buffer || !editorReady}
           >
             <Text style={styles.runButtonText}>{"\u25B6"} Run</Text>
           </TouchableOpacity>
@@ -306,10 +425,11 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         {showTree && (
           <View style={styles.treeSidebar}>
             <ScriptTree
-              nodes={scriptNodes}
+              nodes={scriptMetas}
               activeScriptId={activeScript?.id ?? null}
               onSelectScript={handleSelectScript}
               onCreateScript={handleCreateScript}
+              onCreateUIScript={handleCreateUIScript}
               onCreateFolder={handleCreateFolder}
               onDeleteNode={handleDeleteNode}
               onRenameNode={handleRenameNode}
@@ -319,7 +439,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
 
         {/* Editor + Output */}
         <View style={styles.editorArea}>
-          {activeScript ? (
+          {editorReady ? (
             <View style={styles.splitView}>
               {/* CodeMirror Editor */}
               <View style={styles.editorPane}>
@@ -334,64 +454,93 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                 />
               </View>
 
-              {/* Exported Actions Bar */}
-              {exportedActions.length > 0 && (
-                <View style={styles.actionsBar}>
-                  <Text style={styles.actionsLabel}>Actions:</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.actionsScroll}
-                  >
-                    {exportedActions.map((name) => (
-                      <TouchableOpacity
-                        key={name}
-                        style={styles.actionButton}
-                        onPress={() => handleRunAction(name)}
+              {activeScript.scriptClass === "ui" ? (
+                /* Vue UI Preview Pane */
+                <View style={styles.outputPane}>
+                  <View style={styles.outputHeader}>
+                    <Text style={styles.outputTitle}>UI Preview</Text>
+                    {uiRunning && !uiError && (
+                      <Text style={styles.outputSuccess}>Running</Text>
+                    )}
+                    {uiError && (
+                      <Text style={styles.outputError}>Error</Text>
+                    )}
+                  </View>
+                  <div
+                    ref={uiContainerRef}
+                    style={{ flex: 1, overflow: "auto", backgroundColor: "#1e1e1e" }}
+                  />
+                  {uiError && (
+                    <Text style={styles.uiErrorText}>{uiError}</Text>
+                  )}
+                </View>
+              ) : (
+                <>
+                  {/* Exported Actions Bar */}
+                  {exportedActions.length > 0 && (
+                    <View style={styles.actionsBar}>
+                      <Text style={styles.actionsLabel}>Actions:</Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.actionsScroll}
                       >
-                        <Text style={styles.actionButtonText}>
-                          {"\u25B6"} {name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+                        {exportedActions.map((name) => (
+                          <TouchableOpacity
+                            key={name}
+                            style={styles.actionButton}
+                            onPress={() => handleRunAction(name)}
+                          >
+                            <Text style={styles.actionButtonText}>
+                              {"\u25B6"} {name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
 
-              {/* Output Console */}
-              <View style={styles.outputPane}>
-                <View style={styles.outputHeader}>
-                  <Text style={styles.outputTitle}>Output</Text>
-                  {lastResult && !lastResult.error && (
-                    <Text style={styles.outputSuccess}>
-                      OK ({lastResult.duration.toFixed(1)}ms)
-                    </Text>
-                  )}
-                  {lastResult?.error && (
-                    <Text style={styles.outputError}>Error</Text>
-                  )}
-                </View>
-                <ScrollView ref={outputScrollRef} style={styles.outputScroll}>
-                  {output.map((line, i) => (
-                    <Text
-                      key={i}
-                      style={[
-                        styles.outputLine,
-                        line.startsWith("[ERROR]") && styles.outputLineError,
-                        line.startsWith("[WARN]") && styles.outputLineWarn,
-                        line.startsWith("---") && styles.outputLineSeparator,
-                      ]}
-                    >
-                      {line}
-                    </Text>
-                  ))}
-                  {output.length === 0 && (
-                    <Text style={styles.outputPlaceholder}>
-                      Script output will appear here. Click Run to execute.
-                    </Text>
-                  )}
-                </ScrollView>
-              </View>
+                  {/* Output Console */}
+                  <View style={styles.outputPane}>
+                    <View style={styles.outputHeader}>
+                      <Text style={styles.outputTitle}>Output</Text>
+                      {lastResult && !lastResult.error && (
+                        <Text style={styles.outputSuccess}>
+                          OK ({lastResult.duration.toFixed(1)}ms)
+                        </Text>
+                      )}
+                      {lastResult?.error && (
+                        <Text style={styles.outputError}>Error</Text>
+                      )}
+                    </View>
+                    <ScrollView ref={outputScrollRef} style={styles.outputScroll}>
+                      {output.map((line, i) => (
+                        <Text
+                          key={i}
+                          style={[
+                            styles.outputLine,
+                            line.startsWith("[ERROR]") && styles.outputLineError,
+                            line.startsWith("[WARN]") && styles.outputLineWarn,
+                            line.startsWith("---") && styles.outputLineSeparator,
+                          ]}
+                        >
+                          {line}
+                        </Text>
+                      ))}
+                      {output.length === 0 && (
+                        <Text style={styles.outputPlaceholder}>
+                          Script output will appear here. Click Run to execute.
+                        </Text>
+                      )}
+                    </ScrollView>
+                  </View>
+                </>
+              )}
+            </View>
+          ) : activeScript && codeLoading ? (
+            <View style={styles.noScript}>
+              <ActivityIndicator color="#cccccc" />
+              <Text style={styles.noScriptText}>Loading script...</Text>
             </View>
           ) : (
             <View style={styles.noScript}>
@@ -626,6 +775,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#1e1e1e",
+    gap: 8,
   },
   noScriptText: {
     color: "#6e7681",
@@ -635,6 +785,13 @@ const styles = StyleSheet.create({
     color: "#999",
     fontSize: 14,
     padding: 20,
+  },
+  uiErrorText: {
+    color: "#f85149",
+    fontSize: 12,
+    fontFamily: "monospace",
+    padding: 8,
+    backgroundColor: "#1a1a1a",
   },
 });
 

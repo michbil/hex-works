@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Text, Platform, Modal, ScrollView, TouchableOpacity } from 'react-native';
-import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel, GraphPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
+import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel,HeatmapPanel, GraphPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
 import { Drawer } from './src/components/layout';
 import { FileMenu } from './src/components/layout/header';
 import { LocaleProvider } from './src/locales';
@@ -9,7 +9,7 @@ import { usePersistence } from './src/hooks/use-persistence';
 import { useDropFile } from './src/hooks/use-drop-file';
 import { useMobile } from './src/hooks/use-mobile';
 
-type RightPanelTab = 'inspector' | 'search' | 'script' | 'graph';
+type RightPanelTab = 'inspector' | 'search' | 'script' | 'graph' | 'heatmap';
 
 function HexEditorApp() {
   usePersistence();
@@ -103,6 +103,14 @@ function HexEditorApp() {
         >
           <Text style={[styles.panelTabText, rightTab === 'graph' && styles.panelTabTextActive]}>
             Graph
+             </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.panelTab, rightTab === 'heatmap' && styles.panelTabActive]}
+          onPress={() => setRightTab('heatmap')}
+        >
+          <Text style={[styles.panelTabText, rightTab === 'heatmap' && styles.panelTabTextActive]}>
+            Heatmap
           </Text>
         </TouchableOpacity>
       </View>
@@ -129,6 +137,11 @@ function HexEditorApp() {
       {rightTab === 'graph' && (
         <View testID="graph-panel" style={{flex: 1}}>
           <GraphPanel onClose={() => setRightTab('inspector')} />
+        </View>
+      )}
+      {rightTab === 'heatmap' && (
+        <View testID="heatmap-panel" style={{flex: 1}}>
+          <HeatmapPanel onClose={() => setRightTab('inspector')} />
         </View>
       )}
     </>

@@ -4,13 +4,14 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { ScriptNode, getChildren } from './script-storage';
+import { ScriptMeta, getChildren } from './providers/script-provider';
 
 interface ScriptTreeProps {
-  nodes: ScriptNode[];
+  nodes: ScriptMeta[];
   activeScriptId: string | null;
-  onSelectScript: (script: ScriptNode) => void;
+  onSelectScript: (script: ScriptMeta) => void;
   onCreateScript: (parentId: string | null) => void;
+  onCreateUIScript: (parentId: string | null) => void;
   onCreateFolder: (parentId: string | null) => void;
   onDeleteNode: (id: string) => void;
   onRenameNode: (id: string, name: string) => void;
@@ -21,6 +22,7 @@ export function ScriptTree({
   activeScriptId,
   onSelectScript,
   onCreateScript,
+  onCreateUIScript,
   onCreateFolder,
   onDeleteNode,
   onRenameNode,
@@ -35,7 +37,13 @@ export function ScriptTree({
             style={styles.headerButton}
             onPress={() => onCreateScript(null)}
           >
-            <Text style={styles.headerButtonText}>+ Script</Text>
+            <Text style={styles.headerButtonText}>+ CLI</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerButton, styles.headerButtonUI]}
+            onPress={() => onCreateUIScript(null)}
+          >
+            <Text style={styles.headerButtonText}>+ UI</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
@@ -58,6 +66,7 @@ export function ScriptTree({
             activeScriptId={activeScriptId}
             onSelectScript={onSelectScript}
             onCreateScript={onCreateScript}
+            onCreateUIScript={onCreateUIScript}
             onCreateFolder={onCreateFolder}
             onDeleteNode={onDeleteNode}
             onRenameNode={onRenameNode}
@@ -76,16 +85,18 @@ function TreeLevel({
   activeScriptId,
   onSelectScript,
   onCreateScript,
+  onCreateUIScript,
   onCreateFolder,
   onDeleteNode,
   onRenameNode,
 }: {
-  nodes: ScriptNode[];
+  nodes: ScriptMeta[];
   parentId: string | null;
   depth: number;
   activeScriptId: string | null;
-  onSelectScript: (script: ScriptNode) => void;
+  onSelectScript: (script: ScriptMeta) => void;
   onCreateScript: (parentId: string | null) => void;
+  onCreateUIScript: (parentId: string | null) => void;
   onCreateFolder: (parentId: string | null) => void;
   onDeleteNode: (id: string) => void;
   onRenameNode: (id: string, name: string) => void;
@@ -103,6 +114,7 @@ function TreeLevel({
           activeScriptId={activeScriptId}
           onSelectScript={onSelectScript}
           onCreateScript={onCreateScript}
+          onCreateUIScript={onCreateUIScript}
           onCreateFolder={onCreateFolder}
           onDeleteNode={onDeleteNode}
           onRenameNode={onRenameNode}
@@ -120,16 +132,18 @@ function TreeNode({
   activeScriptId,
   onSelectScript,
   onCreateScript,
+  onCreateUIScript,
   onCreateFolder,
   onDeleteNode,
   onRenameNode,
 }: {
-  node: ScriptNode;
-  nodes: ScriptNode[];
+  node: ScriptMeta;
+  nodes: ScriptMeta[];
   depth: number;
   activeScriptId: string | null;
-  onSelectScript: (script: ScriptNode) => void;
+  onSelectScript: (script: ScriptMeta) => void;
   onCreateScript: (parentId: string | null) => void;
+  onCreateUIScript: (parentId: string | null) => void;
   onCreateFolder: (parentId: string | null) => void;
   onDeleteNode: (id: string) => void;
   onRenameNode: (id: string, name: string) => void;
@@ -141,6 +155,7 @@ function TreeNode({
 
   const isFolder = node.type === 'folder';
   const isActive = node.id === activeScriptId;
+  const isReadOnly = node.readOnly === true;
 
   const handlePress = () => {
     if (isFolder) {
@@ -151,6 +166,7 @@ function TreeNode({
   };
 
   const handleContextMenu = () => {
+    if (isReadOnly) return; // no context menu for read-only nodes
     setShowContextMenu(prev => !prev);
   };
 
@@ -194,7 +210,9 @@ function TreeNode({
         )}
 
         {/* Icon */}
-        <Text style={styles.nodeIcon}>{isFolder ? '\uD83D\uDCC1' : '\uD83D\uDCDC'}</Text>
+        <Text style={styles.nodeIcon}>
+          {isFolder ? '\uD83D\uDCC1' : node.scriptClass === 'ui' ? '\uD83D\uDDBC' : '\uD83D\uDCDC'}
+        </Text>
 
         {/* Name or rename input */}
         {isRenaming ? (
@@ -208,15 +226,17 @@ function TreeNode({
             selectTextOnFocus
           />
         ) : (
-          <Text style={[styles.nodeName, isActive && styles.nodeNameActive]} numberOfLines={1}>
+          <Text style={[styles.nodeName, isActive && styles.nodeNameActive, isReadOnly && styles.nodeNameReadOnly]} numberOfLines={1}>
             {node.name}
           </Text>
         )}
 
-        {/* Context menu button */}
-        <TouchableOpacity style={styles.menuButton} onPress={handleContextMenu}>
-          <Text style={styles.menuButtonText}>{'\u22EE'}</Text>
-        </TouchableOpacity>
+        {/* Context menu button (hidden for read-only) */}
+        {!isReadOnly && (
+          <TouchableOpacity style={styles.menuButton} onPress={handleContextMenu}>
+            <Text style={styles.menuButtonText}>{'\u22EE'}</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
 
       {/* Context menu with dismiss overlay */}
@@ -239,7 +259,13 @@ function TreeNode({
                   style={styles.menuItem}
                   onPress={() => { setShowContextMenu(false); onCreateScript(node.id); }}
                 >
-                  <Text style={styles.menuItemText}>New Script Here</Text>
+                  <Text style={styles.menuItemText}>New CLI Script Here</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => { setShowContextMenu(false); onCreateUIScript(node.id); }}
+                >
+                  <Text style={styles.menuItemText}>New UI Script Here</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
@@ -262,6 +288,7 @@ function TreeNode({
           activeScriptId={activeScriptId}
           onSelectScript={onSelectScript}
           onCreateScript={onCreateScript}
+          onCreateUIScript={onCreateUIScript}
           onCreateFolder={onCreateFolder}
           onDeleteNode={onDeleteNode}
           onRenameNode={onRenameNode}
@@ -301,6 +328,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 3,
+  },
+  headerButtonUI: {
+    backgroundColor: '#1a3a5c',
   },
   headerButtonText: {
     color: '#cccccc',
@@ -345,6 +375,10 @@ const styles = StyleSheet.create({
   },
   nodeNameActive: {
     color: '#ffffff',
+  },
+  nodeNameReadOnly: {
+    fontStyle: 'italic',
+    color: '#999999',
   },
   menuButton: {
     width: 20,

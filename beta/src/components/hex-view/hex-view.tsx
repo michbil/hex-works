@@ -10,6 +10,23 @@ import { createPortal } from 'react-dom';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
 import { byteToHex, addressToHex, byteToChar, stringToByteSeq } from '../../utils/helpers';
 
+// Heatmap color: 0 changes → transparent, max → semi-transparent red
+function heatColor(changeCount: number, maxChanges: number): string | null {
+  if (maxChanges === 0 || changeCount === 0) return null;
+  const t = changeCount / maxChanges;
+  if (t <= 0.5) {
+    const s = t * 2;
+    const r = Math.round(30 + s * 225);
+    const g = Math.round(30 + s * 195);
+    const b = Math.round(80 * (1 - s));
+    return `rgba(${r},${g},${b},0.45)`;
+  }
+  const s = (t - 0.5) * 2;
+  const r = 255;
+  const g = Math.round(225 * (1 - s));
+  return `rgba(${r},${g},0,0.45)`;
+}
+
 // Color map for byte highlighting
 const COLOR_MAP: Record<number, string> = {
   0: '#ffffff',
@@ -129,6 +146,7 @@ export function HexView({
     fillSelection,
     getColorBuffer,
     setBytesPerLine,
+    heatmapData,
   } = useHexEditorStore();
 
   // Adaptive bytesPerLine on mobile when dimensions change
@@ -300,6 +318,38 @@ export function HexView({
     const startLine = Math.floor(scrollOffset / bytesPerLine);
     const bufferLength = buffer.length;
 
+    // Pass 1: Draw blurred heatmap backgrounds (when comparison data exists)
+    if (heatmapData && heatmapData.length > 0) {
+      ctx.save();
+      ctx.filter = 'blur(8px)';
+      for (let row = 0; row < visibleRows; row++) {
+        const lineOffset = (startLine + row) * bytesPerLine;
+        if (lineOffset >= bufferLength) break;
+        const y = (row + 1) * lineHeight;
+        let hexX = addressWidth;
+        let asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + gap;
+
+        for (let col = 0; col < bytesPerLine; col++) {
+          const byteIndex = lineOffset + col;
+          if (byteIndex >= bufferLength) break;
+
+          if (byteIndex < heatmapData.length) {
+            const heat = heatmapData[byteIndex];
+            const color = heatColor(heat.changeCount, heat.maxChanges);
+            if (color) {
+              ctx.fillStyle = color;
+              ctx.fillRect(hexX, y - lineHeight + 2, charWidth * hexCharWidth, lineHeight);
+              ctx.fillRect(asciiX, y - lineHeight + 2, charWidth, lineHeight);
+            }
+          }
+          hexX += charWidth * hexCharWidth;
+          asciiX += charWidth;
+        }
+      }
+      ctx.restore();
+    }
+
+    // Pass 2: Draw normal content (address, hex, ascii, selection/color backgrounds)
     for (let row = 0; row < visibleRows; row++) {
       const lineOffset = (startLine + row) * bytesPerLine;
       if (lineOffset >= bufferLength) break;
@@ -455,6 +505,7 @@ export function HexView({
     const { byteIndex, isAscii } = hit;
 
     if (eventType === 'down') {
+      canvas.focus();
       setTextMode(isAscii);
       setCursorPosition(byteIndex);
       setIsEditing(true);

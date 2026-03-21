@@ -28,8 +28,9 @@ export interface ScriptResult {
 
 /**
  * Build a scripting API object that scripts can use to interact with the buffer.
+ * Exported so that the Vue UI engine can reuse it.
  */
-function buildApi(ctx: ScriptContext, output: string[]) {
+export function buildApi(ctx: ScriptContext, output: string[]) {
   const buf = ctx.buffer;
 
   return {
