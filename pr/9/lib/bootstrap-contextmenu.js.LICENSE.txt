@@ -1,0 +1,10 @@
+/*!
+ * Bootstrap Context Menu
+ * Author: @sydcanem
+ * https://github.com/sydcanem/bootstrap-contextmenu
+ *
+ * Inspired by Bootstrap's dropdown plugin.
+ * Bootstrap (http://getbootstrap.com).
+ *
+ * Licensed under MIT
+ * ========================================================= */
