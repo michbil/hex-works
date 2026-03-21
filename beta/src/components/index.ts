@@ -4,5 +4,6 @@ export { Inspector } from './inspector';
 export { SearchPanel } from './search-panel';
 export { ColorPicker } from './color-picker';
 export { ScriptPanel } from './script-panel';
+export { GraphPanel } from './graph-panel';
 export { HeatmapPanel } from './heatmap-panel/heatmap-panel';
 export { Header, StatusBar, TabBar } from './layout';
