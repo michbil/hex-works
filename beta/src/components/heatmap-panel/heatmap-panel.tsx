@@ -66,6 +66,14 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
     };
   }, [tabs, updateHeatmap]);
 
+  // Enable scroll sync while heatmap panel is open
+  useEffect(() => {
+    useHexEditorStore.getState().setSyncScroll(true);
+    return () => {
+      useHexEditorStore.getState().setSyncScroll(false);
+    };
+  }, []);
+
   // Draw heatmap canvas
   const drawHeatmap = useCallback(() => {
     const canvas = canvasRef.current;

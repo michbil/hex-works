@@ -354,8 +354,10 @@ export function HexView({
             asciiX += charWidth;
           }
         }
-        // Apply blur once to entire heatmap layer
+        // Apply blur once to entire heatmap layer — reset transform so
+        // the already-DPR-scaled offscreen maps 1:1 to device pixels.
         ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.filter = 'blur(8px)';
         ctx.drawImage(offscreen, 0, 0);
         ctx.restore();

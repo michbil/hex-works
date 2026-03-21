@@ -87,6 +87,10 @@ export interface HexEditorState {
   heatmapChangeCounts: Uint16Array | null;
   heatmapMaxChanges: number;
   updateHeatmap: () => void;
+
+  // Scroll sync: when enabled, scrolling syncs across all tabs
+  syncScroll: boolean;
+  setSyncScroll: (enabled: boolean) => void;
 }
 
 function deriveFromTab(tab: Tab | undefined) {
@@ -148,6 +152,7 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
   renderKey: 0,
   heatmapChangeCounts: null,
   heatmapMaxChanges: 0,
+  syncScroll: false,
 
   // Tab actions
   addTab: (buffer: BinaryBuffer, fileName?: string) => {
@@ -246,7 +251,17 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
   setSelection: (start: number, end: number) =>
     set({ selection: { start, end } }),
 
-  setScrollOffset: (offset: number) => set({ scrollOffset: offset }),
+  setScrollOffset: (offset: number) => {
+    const state = get();
+    if (state.syncScroll) {
+      // Sync scroll offset to all tabs
+      const tabs = saveActiveTab(state);
+      const updated = tabs.map(t => ({ ...t, scrollOffset: offset }));
+      set({ scrollOffset: offset, tabs: updated });
+    } else {
+      set({ scrollOffset: offset });
+    }
+  },
 
   setBytesPerLine: (count: number) => set({ bytesPerLine: count }),
 
@@ -322,6 +337,8 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
     }
     return state.buffer;
   },
+
+  setSyncScroll: (enabled: boolean) => set({ syncScroll: enabled }),
 
   updateHeatmap: () => {
     const { tabs } = get();

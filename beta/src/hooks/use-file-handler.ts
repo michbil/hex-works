@@ -7,28 +7,31 @@ export function useFileHandler() {
   const { setBuffer, clearBuffer, buffer, fileName, isModified } = useHexEditorStore();
 
   const openFile = async () => {
+    let result: DocumentPicker.DocumentPickerResult;
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
         copyToCacheDirectory: true,
+        multiple: true,
       });
-
-      if (result.canceled) {
-        return null;
-      }
-
-      const file = result.assets[0];
-
-      // Use fetch API which works on both web and native
-      const response = await fetch(file.uri);
-      const arrayBuffer = await response.arrayBuffer();
-      const binaryBuffer = new BinaryBuffer(arrayBuffer);
-      setBuffer(binaryBuffer, file.name);
-      return { name: file.name, size: binaryBuffer.length };
     } catch (error) {
       console.error('Error opening file:', error);
       throw error;
     }
+
+    if (result.canceled) {
+      return null;
+    }
+
+    const opened: { name: string; size: number }[] = [];
+    for (const file of result.assets) {
+      const response = await fetch(file.uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const binaryBuffer = new BinaryBuffer(arrayBuffer);
+      setBuffer(binaryBuffer, file.name);
+      opened.push({ name: file.name, size: binaryBuffer.length });
+    }
+    return opened;
   };
 
   const saveFile = async (customFileName?: string) => {
