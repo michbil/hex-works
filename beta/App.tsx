@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Text, Platform, Modal, ScrollView, TouchableOpacity } from 'react-native';
-import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
+import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel, GraphPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
 import { Drawer } from './src/components/layout';
 import { FileMenu } from './src/components/layout/header';
 import { LocaleProvider } from './src/locales';
@@ -9,7 +9,7 @@ import { usePersistence } from './src/hooks/use-persistence';
 import { useDropFile } from './src/hooks/use-drop-file';
 import { useMobile } from './src/hooks/use-mobile';
 
-type RightPanelTab = 'inspector' | 'search' | 'script';
+type RightPanelTab = 'inspector' | 'search' | 'script' | 'graph';
 
 function HexEditorApp() {
   usePersistence();
@@ -97,6 +97,14 @@ function HexEditorApp() {
             Script
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.panelTab, rightTab === 'graph' && styles.panelTabActive]}
+          onPress={() => setRightTab('graph')}
+        >
+          <Text style={[styles.panelTabText, rightTab === 'graph' && styles.panelTabTextActive]}>
+            Graph
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tab content */}
@@ -116,6 +124,11 @@ function HexEditorApp() {
             onClose={() => setRightTab('inspector')}
             onBufferModified={handleBufferModified}
           />
+        </View>
+      )}
+      {rightTab === 'graph' && (
+        <View testID="graph-panel" style={{flex: 1}}>
+          <GraphPanel onClose={() => setRightTab('inspector')} />
         </View>
       )}
     </>
