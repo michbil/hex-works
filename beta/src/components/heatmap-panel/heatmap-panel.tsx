@@ -40,14 +40,24 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
   const bytesPerLine = useHexEditorStore((s) => s.bytesPerLine);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<View>(null);
   const [selectedOffset, setSelectedOffset] = useState<number | null>(null);
   const [hoveredOffset, setHoveredOffset] = useState<number | null>(null);
+  const [heatScrollRow, setHeatScrollRow] = useState(0);
+  const [wrapHeight, setWrapHeight] = useState(0);
 
   // Fixed columns matching hex dump layout
   const cols = bytesPerLine;
+  const cellSize = 6;
   const cellGap = 1;
+  const step = cellSize + cellGap;
 
   const dataLength = changeCounts?.length ?? 0;
+  const totalRows = Math.ceil(dataLength / cols);
+
+  // Derive visible rows from measured wrapper height
+  const visibleRows = wrapHeight > 0 ? Math.max(1, Math.floor(wrapHeight / step)) : 16;
+  const maxScrollRow = Math.max(0, totalRows - visibleRows);
 
   // Compute summary stats once
   const changedCount = useMemo(() => {
@@ -75,100 +85,153 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
     };
   }, []);
 
-  // Draw heatmap canvas
+  // Pre-compute RGB LUT for each possible changeCount
+  const colorLUT = useMemo(() => {
+    if (maxChanges === 0) return null;
+    // Store [r, g, b] per count
+    const lut = new Uint8Array((maxChanges + 1) * 3);
+    for (let c = 0; c <= maxChanges; c++) {
+      const off = c * 3;
+      if (c === 0) {
+        lut[off] = 26; lut[off + 1] = 26; lut[off + 2] = 46; // #1a1a2e
+      } else {
+        const t = c / maxChanges;
+        if (t <= 0.5) {
+          const s = t * 2;
+          lut[off]     = Math.round(30 + s * 225);
+          lut[off + 1] = Math.round(30 + s * 195);
+          lut[off + 2] = Math.round(80 * (1 - s));
+        } else {
+          const s = (t - 0.5) * 2;
+          lut[off]     = 255;
+          lut[off + 1] = Math.round(225 * (1 - s));
+          lut[off + 2] = 0;
+        }
+      }
+    }
+    return lut;
+  }, [maxChanges]);
+
+  // Draw heatmap canvas — grid with gaps, fills available height
   const drawHeatmap = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !changeCounts || dataLength === 0) return;
+    if (!canvas || !changeCounts || dataLength === 0 || !colorLUT) return;
 
-    const containerWidth = canvas.parentElement?.clientWidth ?? 300;
-    // Size cells to fill container width with fixed column count
-    const cellSize = Math.max(2, Math.floor((containerWidth - cols * cellGap) / cols));
-    const step = cellSize + cellGap;
-    const rows = Math.ceil(dataLength / cols);
+    const w = cols * step + cellGap;
+    const h = visibleRows * step + cellGap;
+    canvas.width = w;
+    canvas.height = h;
 
-    canvas.width = cols * step;
-    canvas.height = rows * step;
-    canvas.style.width = `${canvas.width}px`;
-    canvas.style.height = `${canvas.height}px`;
+    // CSS: stretch to fill wrapper
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.imageRendering = 'pixelated';
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Background (gap color)
     ctx.fillStyle = '#0d0d1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, w, h);
 
-    // Pre-compute color LUT for all possible change counts
-    const colorLUT = new Array<string>(maxChanges + 1);
-    for (let c = 0; c <= maxChanges; c++) {
-      colorLUT[c] = heatColor(c, maxChanges);
+    // Pre-build fillStyle strings from LUT
+    const colorStrings = new Array<string>(maxChanges + 1);
+    for (let i = 0; i <= maxChanges; i++) {
+      const off = i * 3;
+      colorStrings[i] = `rgb(${colorLUT[off]},${colorLUT[off + 1]},${colorLUT[off + 2]})`;
     }
 
-    for (let i = 0; i < dataLength; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = col * step;
-      const y = row * step;
+    const startByte = heatScrollRow * cols;
 
-      ctx.fillStyle = colorLUT[changeCounts[i]];
-      ctx.fillRect(x, y, cellSize, cellSize);
+    for (let r = 0; r < visibleRows; r++) {
+      const y = cellGap + r * step;
+      for (let c = 0; c < cols; c++) {
+        const byteIdx = startByte + r * cols + c;
+        const x = cellGap + c * step;
+        if (byteIdx < dataLength) {
+          ctx.fillStyle = colorStrings[changeCounts[byteIdx]];
+        } else {
+          ctx.fillStyle = '#1a1a2e';
+        }
+        ctx.fillRect(x, y, cellSize, cellSize);
+      }
+    }
 
-      if (i === selectedOffset) {
+    // Draw selection highlight if visible
+    if (selectedOffset !== null && selectedOffset < dataLength) {
+      const selRow = Math.floor(selectedOffset / cols) - heatScrollRow;
+      const selCol = selectedOffset % cols;
+      if (selRow >= 0 && selRow < visibleRows) {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1;
+        const x = cellGap + selCol * step;
+        const y = cellGap + selRow * step;
         ctx.strokeRect(x - 0.5, y - 0.5, cellSize + 1, cellSize + 1);
       }
     }
-  }, [changeCounts, dataLength, maxChanges, selectedOffset, cols, cellGap]);
+  }, [changeCounts, dataLength, maxChanges, selectedOffset, cols, visibleRows, colorLUT, heatScrollRow, step, cellSize, cellGap]);
 
   useEffect(() => {
     drawHeatmap();
   }, [drawHeatmap]);
 
-  // Derive cell step from canvas width and fixed cols
-  const getStep = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || cols === 0) return cellGap + 2;
-    return canvas.width / cols;
-  }, [cols, cellGap]);
+  // Map mouse position to byte offset (CSS-scaled canvas + scroll)
+  const mouseToOffset = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>): number => {
+      const canvas = canvasRef.current;
+      if (!canvas) return -1;
+      const rect = canvas.getBoundingClientRect();
+      // Map CSS coords to canvas coords, then to cell
+      const cx = (e.clientX - rect.left) / rect.width * canvas.width;
+      const cy = (e.clientY - rect.top) / rect.height * canvas.height;
+      const col = Math.floor((cx - cellGap) / step);
+      const row = Math.floor((cy - cellGap) / step);
+      if (col < 0 || col >= cols || row < 0 || row >= visibleRows) return -1;
+      return (heatScrollRow + row) * cols + col;
+    },
+    [cols, visibleRows, heatScrollRow, step, cellGap],
+  );
 
-  // Handle canvas click
+  // Mouse wheel scrolling
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault();
+      setHeatScrollRow((prev) => {
+        const delta = e.deltaY > 0 ? 1 : -1;
+        return Math.max(0, Math.min(maxScrollRow, prev + delta));
+      });
+    },
+    [maxScrollRow],
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const step = getStep();
-      const col = Math.floor(x / step);
-      const row = Math.floor(y / step);
-      const offset = row * cols + col;
+      const offset = mouseToOffset(e);
       if (offset >= 0 && offset < dataLength) {
         setSelectedOffset(offset);
         setCursorPosition(offset);
       }
     },
-    [dataLength, cols, getStep, setCursorPosition],
+    [dataLength, mouseToOffset, setCursorPosition],
   );
 
   const handleCanvasMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const step = getStep();
-      const col = Math.floor(x / step);
-      const row = Math.floor(y / step);
-      const offset = row * cols + col;
+      const offset = mouseToOffset(e);
       if (offset >= 0 && offset < dataLength) {
         setHoveredOffset(offset);
       } else {
         setHoveredOffset(null);
       }
     },
-    [dataLength, cols, getStep],
+    [dataLength, mouseToOffset],
   );
 
   const goToOffset = useCallback(
@@ -207,7 +270,7 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
         <Text style={styles.title}>Heatmap Compare</Text>
         <Text style={styles.subtitle}>
           {tabs.length} dumps &middot; {dataLength} bytes &middot;{' '}
-          {changedCount} differ
+          {changedCount} differ &middot; row {heatScrollRow}/{totalRows}
         </Text>
       </View>
 
@@ -227,9 +290,13 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
         </View>
       </View>
 
-      {/* Heatmap canvas */}
+      {/* Heatmap canvas — fills remaining vertical space */}
       {Platform.OS === 'web' && (
-        <View style={styles.canvasWrap}>
+        <View
+          ref={wrapRef}
+          style={styles.canvasWrap}
+          onLayout={(e) => setWrapHeight(e.nativeEvent.layout.height)}
+        >
           <canvas
             ref={canvasRef}
             onClick={handleCanvasClick as any}
@@ -322,10 +389,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   canvasWrap: {
+    flex: 1,
     paddingHorizontal: 10,
     paddingBottom: 8,
-    maxHeight: 160,
-    overflow: 'hidden',
   },
   detail: {
     padding: 10,
