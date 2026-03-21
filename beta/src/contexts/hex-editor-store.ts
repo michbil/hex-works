@@ -83,8 +83,9 @@ export interface HexEditorState {
   setMasterTab: (enabled: boolean) => void;
   getColorBuffer: () => BinaryBuffer | null;
 
-  // Heatmap comparison data (per-byte diff stats across all tabs)
-  heatmapData: { changeCount: number; maxChanges: number }[] | null;
+  // Heatmap comparison data (typed arrays for performance)
+  heatmapChangeCounts: Uint16Array | null;
+  heatmapMaxChanges: number;
   updateHeatmap: () => void;
 }
 
@@ -145,7 +146,8 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
   isEditing: false,
   editNibble: 'high',
   renderKey: 0,
-  heatmapData: null,
+  heatmapChangeCounts: null,
+  heatmapMaxChanges: 0,
 
   // Tab actions
   addTab: (buffer: BinaryBuffer, fileName?: string) => {
@@ -324,17 +326,12 @@ export const useHexEditorStore = create<HexEditorState>((set, get) => ({
   updateHeatmap: () => {
     const { tabs } = get();
     if (tabs.length < 2) {
-      set({ heatmapData: null });
+      set({ heatmapChangeCounts: null, heatmapMaxChanges: 0 });
       return;
     }
     const buffers = tabs.map((t) => t.buffer);
-    const rawDiff = BinaryBuffer.compareMultiple(buffers);
-    const maxChanges = Math.max(1, ...rawDiff.map((d) => d.changeCount));
-    const heatmapData = rawDiff.map((d) => ({
-      changeCount: d.changeCount,
-      maxChanges,
-    }));
-    set({ heatmapData });
+    const { changeCounts, maxChanges } = BinaryBuffer.compareMultipleFast(buffers);
+    set({ heatmapChangeCounts: changeCounts, heatmapMaxChanges: maxChanges });
   },
 }));
 

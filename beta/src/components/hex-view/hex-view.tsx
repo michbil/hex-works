@@ -146,7 +146,8 @@ export function HexView({
     fillSelection,
     getColorBuffer,
     setBytesPerLine,
-    heatmapData,
+    heatmapChangeCounts,
+    heatmapMaxChanges,
   } = useHexEditorStore();
 
   // Adaptive bytesPerLine on mobile when dimensions change
@@ -319,34 +320,46 @@ export function HexView({
     const bufferLength = buffer.length;
 
     // Pass 1: Draw blurred heatmap backgrounds (when comparison data exists)
-    if (heatmapData && heatmapData.length > 0) {
-      ctx.save();
-      ctx.filter = 'blur(8px)';
-      for (let row = 0; row < visibleRows; row++) {
-        const lineOffset = (startLine + row) * bytesPerLine;
-        if (lineOffset >= bufferLength) break;
-        const y = (row + 1) * lineHeight;
-        let hexX = addressWidth;
-        let asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + gap;
+    if (heatmapChangeCounts && heatmapChangeCounts.length > 0 && heatmapMaxChanges > 0) {
+      // Draw heatmap to offscreen canvas, then apply blur once
+      const offscreen = document.createElement('canvas');
+      offscreen.width = canvas.width;
+      offscreen.height = canvas.height;
+      const offCtx = offscreen.getContext('2d');
+      if (offCtx) {
+        offCtx.scale(dpr, dpr);
+        for (let row = 0; row < visibleRows; row++) {
+          const lineOffset = (startLine + row) * bytesPerLine;
+          if (lineOffset >= bufferLength) break;
+          const y = (row + 1) * lineHeight;
+          let hexX = addressWidth;
+          let asciiX = addressWidth + charWidth * bytesPerLine * hexCharWidth + gap;
 
-        for (let col = 0; col < bytesPerLine; col++) {
-          const byteIndex = lineOffset + col;
-          if (byteIndex >= bufferLength) break;
+          for (let col = 0; col < bytesPerLine; col++) {
+            const byteIndex = lineOffset + col;
+            if (byteIndex >= bufferLength) break;
 
-          if (byteIndex < heatmapData.length) {
-            const heat = heatmapData[byteIndex];
-            const color = heatColor(heat.changeCount, heat.maxChanges);
-            if (color) {
-              ctx.fillStyle = color;
-              ctx.fillRect(hexX, y - lineHeight + 2, charWidth * hexCharWidth, lineHeight);
-              ctx.fillRect(asciiX, y - lineHeight + 2, charWidth, lineHeight);
+            if (byteIndex < heatmapChangeCounts.length) {
+              const cc = heatmapChangeCounts[byteIndex];
+              if (cc > 0) {
+                const color = heatColor(cc, heatmapMaxChanges);
+                if (color) {
+                  offCtx.fillStyle = color;
+                  offCtx.fillRect(hexX, y - lineHeight + 2, charWidth * hexCharWidth, lineHeight);
+                  offCtx.fillRect(asciiX, y - lineHeight + 2, charWidth, lineHeight);
+                }
+              }
             }
+            hexX += charWidth * hexCharWidth;
+            asciiX += charWidth;
           }
-          hexX += charWidth * hexCharWidth;
-          asciiX += charWidth;
         }
+        // Apply blur once to entire heatmap layer
+        ctx.save();
+        ctx.filter = 'blur(8px)';
+        ctx.drawImage(offscreen, 0, 0);
+        ctx.restore();
       }
-      ctx.restore();
     }
 
     // Pass 2: Draw normal content (address, hex, ascii, selection/color backgrounds)

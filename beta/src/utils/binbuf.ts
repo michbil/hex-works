@@ -202,54 +202,63 @@ export class BinaryBuffer {
   }
 
   /**
-   * Compare multiple buffers and produce per-address statistics.
-   * Returns an array (one entry per byte offset up to maxLen) with:
-   *  - uniqueValues: count of distinct byte values at that address
-   *  - min / max: byte value range
-   *  - values: array of the actual byte value in each buffer
-   *  - changeCount: how many buffers differ from the first buffer
+   * Compare multiple buffers and return per-byte change counts as a typed array.
+   * changeCounts[i] = number of buffers that differ from buffer[0] at offset i.
    */
-  static compareMultiple(
+  static compareMultipleFast(
     buffers: BinaryBuffer[],
-  ): {
-    uniqueValues: number;
-    min: number;
-    max: number;
-    values: number[];
-    changeCount: number;
-  }[] {
-    if (buffers.length === 0) return [];
-    const maxLen = Math.max(...buffers.map((b) => b.length));
-    const result: {
-      uniqueValues: number;
-      min: number;
-      max: number;
-      values: number[];
-      changeCount: number;
-    }[] = new Array(maxLen);
+  ): { changeCounts: Uint16Array; maxChanges: number } {
+    if (buffers.length === 0) return { changeCounts: new Uint16Array(0), maxChanges: 0 };
+    let maxLen = 0;
+    for (let b = 0; b < buffers.length; b++) {
+      if (buffers[b].length > maxLen) maxLen = buffers[b].length;
+    }
+    const changeCounts = new Uint16Array(maxLen);
+    let maxChanges = 0;
+    const firstData = buffers[0].data;
+    const firstLen = firstData.length;
 
     for (let i = 0; i < maxLen; i++) {
-      let min = 0xff;
-      let max = 0x00;
-      const seen = new Set<number>();
-      const values: number[] = [];
-      let changeCount = 0;
-      const firstVal = i < buffers[0].length ? buffers[0].data[i] : -1;
-
-      for (let b = 0; b < buffers.length; b++) {
+      const firstVal = i < firstLen ? firstData[i] : -1;
+      let count = 0;
+      for (let b = 1; b < buffers.length; b++) {
         const val = i < buffers[b].length ? buffers[b].data[i] : -1;
-        values.push(val);
-        if (val >= 0) {
-          seen.add(val);
-          if (val < min) min = val;
-          if (val > max) max = val;
-          if (b > 0 && val !== firstVal) changeCount++;
-        }
+        if (val !== firstVal) count++;
       }
-
-      result[i] = { uniqueValues: seen.size, min, max, values, changeCount };
+      changeCounts[i] = count;
+      if (count > maxChanges) maxChanges = count;
     }
-    return result;
+    return { changeCounts, maxChanges };
+  }
+
+  /**
+   * Compare multiple buffers and produce per-address statistics (detailed).
+   * Used by the heatmap panel for the detail inspector.
+   * Only call this for specific offsets, not the entire buffer.
+   */
+  static compareAtOffset(
+    buffers: BinaryBuffer[],
+    offset: number,
+  ): { uniqueValues: number; min: number; max: number; values: number[]; changeCount: number } {
+    let min = 0xff;
+    let max = 0x00;
+    const seen = new Uint8Array(256); // bitset for byte values
+    let uniqueCount = 0;
+    const values: number[] = new Array(buffers.length);
+    let changeCount = 0;
+    const firstVal = offset < buffers[0].length ? buffers[0].data[offset] : -1;
+
+    for (let b = 0; b < buffers.length; b++) {
+      const val = offset < buffers[b].length ? buffers[b].data[offset] : -1;
+      values[b] = val;
+      if (val >= 0) {
+        if (seen[val] === 0) { seen[val] = 1; uniqueCount++; }
+        if (val < min) min = val;
+        if (val > max) max = val;
+        if (b > 0 && val !== firstVal) changeCount++;
+      }
+    }
+    return { uniqueValues: uniqueCount, min, max, values, changeCount };
   }
 
   // Swap adjacent bytes
