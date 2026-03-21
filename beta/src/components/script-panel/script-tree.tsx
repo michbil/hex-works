@@ -4,12 +4,12 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { ScriptNode, getChildren } from './script-storage';
+import { ScriptMeta, getChildren } from './providers/script-provider';
 
 interface ScriptTreeProps {
-  nodes: ScriptNode[];
+  nodes: ScriptMeta[];
   activeScriptId: string | null;
-  onSelectScript: (script: ScriptNode) => void;
+  onSelectScript: (script: ScriptMeta) => void;
   onCreateScript: (parentId: string | null) => void;
   onCreateUIScript: (parentId: string | null) => void;
   onCreateFolder: (parentId: string | null) => void;
@@ -90,11 +90,11 @@ function TreeLevel({
   onDeleteNode,
   onRenameNode,
 }: {
-  nodes: ScriptNode[];
+  nodes: ScriptMeta[];
   parentId: string | null;
   depth: number;
   activeScriptId: string | null;
-  onSelectScript: (script: ScriptNode) => void;
+  onSelectScript: (script: ScriptMeta) => void;
   onCreateScript: (parentId: string | null) => void;
   onCreateUIScript: (parentId: string | null) => void;
   onCreateFolder: (parentId: string | null) => void;
@@ -137,11 +137,11 @@ function TreeNode({
   onDeleteNode,
   onRenameNode,
 }: {
-  node: ScriptNode;
-  nodes: ScriptNode[];
+  node: ScriptMeta;
+  nodes: ScriptMeta[];
   depth: number;
   activeScriptId: string | null;
-  onSelectScript: (script: ScriptNode) => void;
+  onSelectScript: (script: ScriptMeta) => void;
   onCreateScript: (parentId: string | null) => void;
   onCreateUIScript: (parentId: string | null) => void;
   onCreateFolder: (parentId: string | null) => void;
@@ -155,6 +155,7 @@ function TreeNode({
 
   const isFolder = node.type === 'folder';
   const isActive = node.id === activeScriptId;
+  const isReadOnly = node.readOnly === true;
 
   const handlePress = () => {
     if (isFolder) {
@@ -165,6 +166,7 @@ function TreeNode({
   };
 
   const handleContextMenu = () => {
+    if (isReadOnly) return; // no context menu for read-only nodes
     setShowContextMenu(prev => !prev);
   };
 
@@ -224,15 +226,17 @@ function TreeNode({
             selectTextOnFocus
           />
         ) : (
-          <Text style={[styles.nodeName, isActive && styles.nodeNameActive]} numberOfLines={1}>
+          <Text style={[styles.nodeName, isActive && styles.nodeNameActive, isReadOnly && styles.nodeNameReadOnly]} numberOfLines={1}>
             {node.name}
           </Text>
         )}
 
-        {/* Context menu button */}
-        <TouchableOpacity style={styles.menuButton} onPress={handleContextMenu}>
-          <Text style={styles.menuButtonText}>{'\u22EE'}</Text>
-        </TouchableOpacity>
+        {/* Context menu button (hidden for read-only) */}
+        {!isReadOnly && (
+          <TouchableOpacity style={styles.menuButton} onPress={handleContextMenu}>
+            <Text style={styles.menuButtonText}>{'\u22EE'}</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
 
       {/* Context menu with dismiss overlay */}
@@ -371,6 +375,10 @@ const styles = StyleSheet.create({
   },
   nodeNameActive: {
     color: '#ffffff',
+  },
+  nodeNameReadOnly: {
+    fontStyle: 'italic',
+    color: '#999999',
   },
   menuButton: {
     width: 20,
