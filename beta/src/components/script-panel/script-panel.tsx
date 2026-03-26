@@ -35,6 +35,7 @@ import {
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { highlightSelectionMatches } from "@codemirror/search";
 import { useHexEditorStore } from "../../contexts/hex-editor-store";
+import { useTranslation } from "../../locales";
 import { executeScript, executeAction, ScriptResult } from "./script-engine";
 import { mountUIScript, UIScriptHandle } from "./vue-script-engine";
 import { ScriptTree } from "./script-tree";
@@ -58,6 +59,7 @@ interface ScriptPanelProps {
 
 export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
   'use no memo'
+  const { t } = useTranslation();
   const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [output, setOutput] = useState<string[]>([]);
@@ -381,7 +383,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     return (
       <View style={styles.container}>
         <Text style={styles.unsupported}>
-          Scripting is only available on web platform.
+          {t('scriptingWebOnly')}
         </Text>
       </View>
     );
@@ -403,7 +405,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
         <Text style={styles.toolbarTitle} numberOfLines={1}>
           {activeScript
             ? getNodePath(scriptMetas, activeScript.id)
-            : "Script Editor"}
+            : t('scriptEditor')}
         </Text>
         <View style={styles.toolbarButtons}>
           <TouchableOpacity
@@ -414,10 +416,10 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
             onPress={handleRun}
             disabled={!buffer || !editorReady}
           >
-            <Text style={styles.runButtonText}>{"\u25B6"} Run</Text>
+            <Text style={styles.runButtonText}>{"\u25B6"} {t('run')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolbarButton} onPress={handleClear}>
-            <Text style={styles.toolbarButtonText}>Clear</Text>
+            <Text style={styles.toolbarButtonText}>{t('clear')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeButtonText}>{"\u2715"}</Text>
@@ -464,12 +466,12 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                 /* Vue UI Preview Pane */
                 <View style={styles.outputPane}>
                   <View style={styles.outputHeader}>
-                    <Text style={styles.outputTitle}>UI Preview</Text>
+                    <Text style={styles.outputTitle}>{t('uiPreview')}</Text>
                     {uiRunning && !uiError && (
-                      <Text style={styles.outputSuccess}>Running</Text>
+                      <Text style={styles.outputSuccess}>{t('running')}</Text>
                     )}
                     {uiError && (
-                      <Text style={styles.outputError}>Error</Text>
+                      <Text style={styles.outputError}>{t('error')}</Text>
                     )}
                   </View>
                   <div
@@ -485,7 +487,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                   {/* Exported Actions Bar */}
                   {exportedActions.length > 0 && (
                     <View style={styles.actionsBar}>
-                      <Text style={styles.actionsLabel}>Actions:</Text>
+                      <Text style={styles.actionsLabel}>{t('actions')}</Text>
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -509,14 +511,14 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                   {/* Output Console */}
                   <View style={styles.outputPane}>
                     <View style={styles.outputHeader}>
-                      <Text style={styles.outputTitle}>Output</Text>
+                      <Text style={styles.outputTitle}>{t('output')}</Text>
                       {lastResult && !lastResult.error && (
                         <Text style={styles.outputSuccess}>
-                          OK ({lastResult.duration.toFixed(1)}ms)
+                          {t('okDuration', { duration: lastResult.duration.toFixed(1) })}
                         </Text>
                       )}
                       {lastResult?.error && (
-                        <Text style={styles.outputError}>Error</Text>
+                        <Text style={styles.outputError}>{t('error')}</Text>
                       )}
                     </View>
                     <ScrollView ref={outputScrollRef} style={styles.outputScroll}>
@@ -535,7 +537,7 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
                       ))}
                       {output.length === 0 && (
                         <Text style={styles.outputPlaceholder}>
-                          Script output will appear here. Click Run to execute.
+                          {t('scriptOutputPlaceholder')}
                         </Text>
                       )}
                     </ScrollView>
@@ -546,12 +548,12 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
           ) : activeScript && codeLoading ? (
             <View style={styles.noScript}>
               <ActivityIndicator color="#cccccc" />
-              <Text style={styles.noScriptText}>Loading script...</Text>
+              <Text style={styles.noScriptText}>{t('loadingScript')}</Text>
             </View>
           ) : (
             <View style={styles.noScript}>
               <Text style={styles.noScriptText}>
-                Select a script from the library or create a new one.
+                {t('selectScript')}
               </Text>
             </View>
           )}

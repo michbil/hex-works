@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
+import { useTranslation } from '../../locales';
 
 interface InspectorProps {
   width?: number;
@@ -94,6 +95,7 @@ function makeFieldStates(): FieldStates {
 }
 
 export function Inspector(_props: InspectorProps) {
+  const { t } = useTranslation();
   const buffer = useHexEditorStore((s) => s.buffer);
   const selection = useHexEditorStore((s) => s.selection);
   const cursorPosition = useHexEditorStore((s) => s.cursorPosition);
@@ -308,16 +310,16 @@ export function Inspector(_props: InspectorProps) {
 
   // Header text
   const headerText = (() => {
-    if (!decoded) return 'No selection';
-    if (decoded.count === 1) return `Byte at 0x${toHex(decoded.start, 8)}`;
-    return `Bytes 0x${toHex(decoded.start, 8)} - 0x${toHex(decoded.end, 8)} (${decoded.count} bytes)`;
+    if (!decoded) return t('noSelection');
+    if (decoded.count === 1) return t('byteAt', { addr: '0x' + toHex(decoded.start, 8) });
+    return t('bytesRange', { start: '0x' + toHex(decoded.start, 8), end: '0x' + toHex(decoded.end, 8), count: decoded.count });
   })();
 
   if (!buffer) {
     return (
       <View style={styles.container}>
-        <Text style={styles.header}>Inspector</Text>
-        <Text style={styles.noData}>No file loaded</Text>
+        <Text style={styles.header}>{t('inspector')}</Text>
+        <Text style={styles.noData}>{t('noFileLoaded')}</Text>
       </View>
     );
   }
@@ -341,7 +343,7 @@ export function Inspector(_props: InspectorProps) {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.header}>Inspector</Text>
+      <Text style={styles.header}>{t('inspector')}</Text>
       <Text style={styles.subHeader}>{headerText}</Text>
 
       {decoded && (
@@ -349,39 +351,39 @@ export function Inspector(_props: InspectorProps) {
           {/* Normal Order Section */}
           <View style={styles.column}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Normal Order (Big-Endian)</Text>
-              {renderField('Hex:', 'hexNormal')}
-              {renderField('Hex Inv:', 'hexNormalInv')}
-              {decoded.canNumeric && renderField('Decimal:', 'decNormal')}
-              {decoded.canNumeric && renderField('Dec Inv:', 'decNormalInv')}
+              <Text style={styles.sectionTitle}>{t('normalOrderBE')}</Text>
+              {renderField(t('hex'), 'hexNormal')}
+              {renderField(t('hexInv'), 'hexNormalInv')}
+              {decoded.canNumeric && renderField(t('decimal'), 'decNormal')}
+              {decoded.canNumeric && renderField(t('decInv'), 'decNormalInv')}
             </View>
           </View>
 
           {/* Reverse Order Section */}
           <View style={styles.column}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Reverse Order (Little-Endian)</Text>
-              {renderField('Hex:', 'hexReverse')}
-              {renderField('Hex Inv:', 'hexReverseInv')}
-              {decoded.canNumeric && renderField('Decimal:', 'decReverse')}
-              {decoded.canNumeric && renderField('Dec Inv:', 'decReverseInv')}
+              <Text style={styles.sectionTitle}>{t('reverseOrderLE')}</Text>
+              {renderField(t('hex'), 'hexReverse')}
+              {renderField(t('hexInv'), 'hexReverseInv')}
+              {decoded.canNumeric && renderField(t('decimal'), 'decReverse')}
+              {decoded.canNumeric && renderField(t('decInv'), 'decReverseInv')}
             </View>
           </View>
 
           {/* Checksum Section (read-only) */}
           <View style={styles.column}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Checksums</Text>
+              <Text style={styles.sectionTitle}>{t('checksums')}</Text>
               <View style={styles.row}>
-                <Text style={styles.label}>Sum (8-bit):</Text>
+                <Text style={styles.label}>{t('sum8bit')}</Text>
                 <TextInput style={styles.input} value={decoded.sum8} editable={false} selectTextOnFocus />
               </View>
               <View style={styles.row}>
-                <Text style={styles.label}>XOR:</Text>
+                <Text style={styles.label}>{t('xor')}</Text>
                 <TextInput style={styles.input} value={decoded.xorSum} editable={false} selectTextOnFocus />
               </View>
               <View style={styles.row}>
-                <Text style={styles.label}>Sum (16-bit):</Text>
+                <Text style={styles.label}>{t('sum16bit')}</Text>
                 <TextInput style={styles.input} value={decoded.sum16} editable={false} selectTextOnFocus />
               </View>
             </View>

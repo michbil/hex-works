@@ -14,6 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
+import { useTranslation } from '../../locales';
 import { searchBytes } from '../../utils/helpers';
 
 interface SearchPanelProps {
@@ -32,6 +33,7 @@ function toHexAddr(n: number): string {
 }
 
 export function SearchPanel({ onClose }: SearchPanelProps) {
+  const { t } = useTranslation();
   const { buffer, setCursorPosition, setSelection, setScrollOffset, bytesPerLine } =
     useHexEditorStore();
 
@@ -69,7 +71,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
   // Find all occurrences
   const findAll = () => {
     if (!buffer || !searchQuery) {
-      setSearchResult('Enter a search query');
+      setSearchResult(t('enterSearchQuery'));
       setMatches([]);
       setActiveIndex(-1);
       return;
@@ -82,7 +84,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
     if (searchMode === 'hex') {
       const p = hexStringToBytes(searchQuery);
       if (!p) {
-        setSearchResult('Invalid hex pattern');
+        setSearchResult(t('invalidHexPattern'));
         setMatches([]);
         setActiveIndex(-1);
         return;
@@ -122,11 +124,11 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
     setMatches(results);
 
     if (results.length === 0) {
-      setSearchResult('Pattern not found');
+      setSearchResult(t('patternNotFound'));
       setActiveIndex(-1);
     } else {
       const suffix = results.length >= MAX_RESULTS ? '+' : '';
-      setSearchResult(`${results.length}${suffix} occurrences found`);
+      setSearchResult(t('occurrencesFound', { num: `${results.length}${suffix}` }));
       // Navigate to first result
       setActiveIndex(0);
       navigateToMatch(results[0]);
@@ -163,7 +165,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Search</Text>
+        <Text style={styles.title}>{t('search')}</Text>
         {onClose && (
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeButtonText}>×</Text>
@@ -180,7 +182,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
           <Text
             style={[styles.modeButtonText, searchMode === 'hex' && styles.modeButtonTextActive]}
           >
-            Hex
+            {t('hexMode')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -190,7 +192,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
           <Text
             style={[styles.modeButtonText, searchMode === 'text' && styles.modeButtonTextActive]}
           >
-            Text
+            {t('textMode')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -200,7 +202,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
         style={styles.input}
         value={searchQuery}
         onChangeText={setSearchQuery}
-        placeholder={searchMode === 'hex' ? 'Enter hex (e.g., FF 00 AB)' : 'Enter text to search'}
+        placeholder={searchMode === 'hex' ? t('hexPlaceholder') : t('textPlaceholder')}
         placeholderTextColor="#666666"
         autoCapitalize="none"
         autoCorrect={false}
@@ -210,7 +212,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
       {/* Case Sensitive Toggle (for text mode) */}
       {searchMode === 'text' && (
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Case sensitive</Text>
+          <Text style={styles.optionLabel}>{t('caseSensitive')}</Text>
           <Switch value={caseSensitive} onValueChange={setCaseSensitive} />
         </View>
       )}
@@ -218,7 +220,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
       {/* Search Buttons */}
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.button} onPress={findAll}>
-          <Text style={styles.buttonText}>Find All</Text>
+          <Text style={styles.buttonText}>{t('findAll')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.buttonOutline} onPress={findPrev}>
           <Text style={styles.buttonOutlineText}>{'\u25C0'}</Text>
@@ -251,7 +253,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
             >
               <Text style={styles.matchIndex}>{i + 1}</Text>
               <Text style={styles.matchOffset}>{toHexAddr(match.offset)}</Text>
-              <Text style={styles.matchLength}>{match.length} bytes</Text>
+              <Text style={styles.matchLength}>{t('nBytes', { count: match.length })}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

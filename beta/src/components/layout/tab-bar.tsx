@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { createPortal } from 'react-dom';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
+import { useTranslation } from '../../locales';
 import { useMobile } from '../../hooks/use-mobile';
 
 interface ContextMenu {
@@ -87,6 +88,7 @@ export function TabBar() {
   const compareToTab = useHexEditorStore((s) => s.compareToTab);
   const resizeBuffer = useHexEditorStore((s) => s.resizeBuffer);
   const buffer = useHexEditorStore((s) => s.buffer);
+  const { t } = useTranslation();
   const { isMobile } = useMobile();
 
   const { menu, setMenu, setTabRef, tabRefs } = useTabContextMenu(tabs.length, switchTab);
@@ -202,11 +204,11 @@ export function TabBar() {
           >
             {/* Resize */}
             {!showResize ? (
-              <MenuItem label="Change buffer size..." onClick={handleResizeClick} />
+              <MenuItem label={t('changeBufferSize')} onClick={handleResizeClick} />
             ) : (
               <div style={{ padding: '4px 12px' }}>
                 <div style={{ fontSize: 12, color: '#6c757d', marginBottom: 4 }}>
-                  New size (bytes):
+                  {t('newSizeBytes')}
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <input
@@ -237,7 +239,7 @@ export function TabBar() {
                       cursor: 'pointer',
                     }}
                   >
-                    OK
+                    {t('ok')}
                   </button>
                 </div>
               </div>
@@ -248,7 +250,7 @@ export function TabBar() {
               <>
                 <div style={{ borderTop: '1px solid #dee2e6', margin: '4px 0' }} />
                 <div style={{ fontSize: 12, color: '#6c757d', padding: '4px 12px', fontWeight: 600 }}>
-                  Compare to:
+                  {t('compareTo')}
                 </div>
                 {tabs.map((tab, i) => {
                   if (i === menu.tabIndex) return null;

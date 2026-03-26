@@ -157,7 +157,7 @@ export function FileMenu({
 
   return (
     <View style={styles.fileMenu}>
-      <Text style={styles.fileMenuTitle}>File</Text>
+      <Text style={styles.fileMenuTitle}>{t('file')}</Text>
 
       {fileName && (
         <View style={styles.fileMenuInfo}>
@@ -194,7 +194,7 @@ export function FileMenu({
           onHelpPress?.();
         }}
       >
-        <Text style={styles.fileMenuItemText}>Help</Text>
+        <Text style={styles.fileMenuItemText}>{t('help')}</Text>
       </TouchableOpacity>
     </View>
   );

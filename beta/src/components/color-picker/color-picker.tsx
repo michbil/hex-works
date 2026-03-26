@@ -11,15 +11,15 @@ import { useMobile } from '../../hooks/use-mobile';
 
 // Color palette matching the Angular version
 const COLORS = [
-  { id: 0, name: 'White', color: '#ffffff' },
-  { id: 1, name: 'Red', color: '#E57373' },
-  { id: 2, name: 'Teal', color: '#80CBC4' },
-  { id: 3, name: 'Yellow', color: '#FFEB3B' },
-  { id: 4, name: 'Blue', color: '#64B5F6' },
-  { id: 5, name: 'Purple', color: '#B39DDB' },
-  { id: 6, name: 'Brown', color: '#A1887F' },
-  { id: 7, name: 'Grey', color: '#9E9E9E' },
-];
+  { id: 0, nameKey: 'colorWhite', color: '#ffffff' },
+  { id: 1, nameKey: 'colorRed', color: '#E57373' },
+  { id: 2, nameKey: 'colorTeal', color: '#80CBC4' },
+  { id: 3, nameKey: 'colorYellow', color: '#FFEB3B' },
+  { id: 4, nameKey: 'colorBlue', color: '#64B5F6' },
+  { id: 5, nameKey: 'colorPurple', color: '#B39DDB' },
+  { id: 6, nameKey: 'colorBrown', color: '#A1887F' },
+  { id: 7, nameKey: 'colorGrey', color: '#9E9E9E' },
+] as const;
 
 interface ColorPickerProps {
   onColorSelect?: (colorId: number) => void;
@@ -70,7 +70,7 @@ export function ColorPicker({ onColorSelect }: ColorPickerProps) {
                 item.id === 0 && styles.whiteButton,
               ]}
               onPress={() => handleColorSelect(item.id)}
-              accessibilityLabel={item.name}
+              accessibilityLabel={t(item.nameKey)}
             >
               {item.id === 0 && <Text style={styles.clearText}>✕</Text>}
             </TouchableOpacity>

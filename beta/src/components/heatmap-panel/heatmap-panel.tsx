@@ -17,6 +17,7 @@ import React, {
 } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { useHexEditorStore } from "../../contexts/hex-editor-store";
+import { useTranslation } from "../../locales";
 
 // Heatmap color scale: 0 changes → dark, max changes → bright red
 function heatColor(changeCount: number, maxChanges: number): string {
@@ -36,6 +37,7 @@ function heatColor(changeCount: number, maxChanges: number): string {
 }
 
 export function HeatmapPanel() {
+  const { t } = useTranslation();
   const tabs = useHexEditorStore((s) => s.tabs);
   const updateHeatmap = useHexEditorStore((s) => s.updateHeatmap);
   const changeCounts = useHexEditorStore((s) => s.heatmapChangeCounts);
@@ -182,8 +184,7 @@ export function HeatmapPanel() {
     return (
       <View style={styles.container}>
         <Text style={styles.placeholder}>
-          Open 2+ dumps in separate tabs to compare.{"\n"}
-          Right-click the tab bar to load files.
+          {t('heatmapEmpty')}
         </Text>
       </View>
     );
@@ -193,10 +194,9 @@ export function HeatmapPanel() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Heatmap Compare</Text>
+        <Text style={styles.title}>{t('heatmapCompare')}</Text>
         <Text style={styles.subtitle}>
-          {tabs.length} dumps &middot; {dataLength} bytes &middot;{" "}
-          {changedCount} differ &middot; 
+          {t('heatmapSubtitle', { tabCount: tabs.length, byteCount: dataLength, diffCount: changedCount })}
         </Text>
       </View>
 
@@ -204,7 +204,7 @@ export function HeatmapPanel() {
       <View style={styles.legend}>
         <View style={styles.legendRow}>
           <View style={[styles.legendSwatch, { backgroundColor: "#1a1a2e" }]} />
-          <Text style={styles.legendLabel}>No change</Text>
+          <Text style={styles.legendLabel}>{t('noChange')}</Text>
         </View>
         <View style={styles.legendRow}>
           <View
@@ -218,7 +218,7 @@ export function HeatmapPanel() {
               },
             ]}
           />
-          <Text style={styles.legendLabel}>Some</Text>
+          <Text style={styles.legendLabel}>{t('some')}</Text>
         </View>
         <View style={styles.legendRow}>
           <View
@@ -227,7 +227,7 @@ export function HeatmapPanel() {
               { backgroundColor: heatColor(maxChanges, maxChanges) },
             ]}
           />
-          <Text style={styles.legendLabel}>All differ</Text>
+          <Text style={styles.legendLabel}>{t('allDiffer')}</Text>
         </View>
       </View>
 

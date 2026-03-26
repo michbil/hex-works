@@ -8,6 +8,7 @@ import {
   Platform,
 } from "react-native";
 import { useHexEditorStore } from "../../contexts/hex-editor-store";
+import { useTranslation } from "../../locales";
 import type { ChartOptions } from "chart.js";
 import type { BinaryBuffer } from "../../utils/binbuf";
 import {
@@ -124,6 +125,7 @@ interface GraphPanelProps {
 }
 
 export function GraphPanel({ onClose: _onClose }: GraphPanelProps) {
+  const { t } = useTranslation();
   const buffer = useHexEditorStore((s) => s.buffer);
   const selection = useHexEditorStore((s) => s.selection);
   const renderKey = useHexEditorStore((s) => s.renderKey);
@@ -143,7 +145,7 @@ export function GraphPanel({ onClose: _onClose }: GraphPanelProps) {
   if (Platform.OS !== "web" || !Line || !Bar) {
     return (
       <View style={styles.container}>
-        <Text style={styles.noDataText}>Graphs are only available on web.</Text>
+        <Text style={styles.noDataText}>{t('graphsWebOnly')}</Text>
       </View>
     );
   }
@@ -152,11 +154,11 @@ export function GraphPanel({ onClose: _onClose }: GraphPanelProps) {
     return (
       <View style={styles.container}>
         <View style={styles.controls}>
-          <Text style={styles.sectionTitle}>Graph</Text>
+          <Text style={styles.sectionTitle}>{t('graph')}</Text>
         </View>
         <View style={styles.emptyState}>
           <Text style={styles.noDataText}>
-            Select a range of bytes to visualize.
+            {t('selectRangeToVisualize')}
           </Text>
         </View>
       </View>
@@ -248,28 +250,32 @@ export function GraphPanel({ onClose: _onClose }: GraphPanelProps) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.controls}>
-        <Text style={styles.sectionTitle}>Graph</Text>
+        <Text style={styles.sectionTitle}>{t('graph')}</Text>
         <Text style={styles.infoText}>
-          {values.length} values from {raw.length} bytes
+          {t('valuesFromBytes', { values: values.length, bytes: raw.length })}
         </Text>
       </View>
 
       {/* Graph type selector */}
       <View style={styles.row}>
-        <Text style={styles.label}>Type:</Text>
-        {(["line", "bar", "histogram"] as GraphType[]).map((t) => (
+        <Text style={styles.label}>{t('type')}</Text>
+        {([
+          { key: "line" as GraphType, label: t('graphLine') },
+          { key: "bar" as GraphType, label: t('graphBar') },
+          { key: "histogram" as GraphType, label: t('graphHistogram') },
+        ]).map((item) => (
           <TouchableOpacity
-            key={t}
-            style={[styles.chip, graphType === t && styles.chipActive]}
-            onPress={() => setGraphType(t)}
+            key={item.key}
+            style={[styles.chip, graphType === item.key && styles.chipActive]}
+            onPress={() => setGraphType(item.key)}
           >
             <Text
               style={[
                 styles.chipText,
-                graphType === t && styles.chipTextActive,
+                graphType === item.key && styles.chipTextActive,
               ]}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {item.label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -277,7 +283,7 @@ export function GraphPanel({ onClose: _onClose }: GraphPanelProps) {
 
       {/* Data format selector */}
       <View style={styles.row}>
-        <Text style={styles.label}>Format:</Text>
+        <Text style={styles.label}>{t('format')}</Text>
         {(
           ["uint8", "int8", "uint16le", "uint16be", "float32le"] as DataFormat[]
         ).map((f) => (

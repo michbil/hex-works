@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { ScriptMeta, getChildren } from './providers/script-provider';
+import { useTranslation } from '../../locales';
 
 interface ScriptTreeProps {
   nodes: ScriptMeta[];
@@ -27,29 +28,30 @@ export function ScriptTree({
   onDeleteNode,
   onRenameNode,
 }: ScriptTreeProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       {/* Header with actions */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Scripts</Text>
+        <Text style={styles.headerTitle}>{t('scripts')}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => onCreateScript(null)}
           >
-            <Text style={styles.headerButtonText}>+ CLI</Text>
+            <Text style={styles.headerButtonText}>{t('newCLI')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.headerButton, styles.headerButtonUI]}
             onPress={() => onCreateUIScript(null)}
           >
-            <Text style={styles.headerButtonText}>+ UI</Text>
+            <Text style={styles.headerButtonText}>{t('newUI')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => onCreateFolder(null)}
           >
-            <Text style={styles.headerButtonText}>+ Folder</Text>
+            <Text style={styles.headerButtonText}>{t('newFolderButton')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -57,7 +59,7 @@ export function ScriptTree({
       {/* Tree */}
       <ScrollView style={styles.treeScroll}>
         {nodes.length === 0 ? (
-          <Text style={styles.emptyText}>No scripts yet. Create one to get started.</Text>
+          <Text style={styles.emptyText}>{t('noScriptsYet')}</Text>
         ) : (
           <TreeLevel
             nodes={nodes}
@@ -148,6 +150,7 @@ function TreeNode({
   onDeleteNode: (id: string) => void;
   onRenameNode: (id: string, name: string) => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -248,10 +251,10 @@ function TreeNode({
           />
           <View style={[styles.contextMenu, { marginLeft: 8 + depth * 16 }]}>
             <TouchableOpacity style={styles.menuItem} onPress={handleStartRename}>
-              <Text style={styles.menuItemText}>Rename</Text>
+              <Text style={styles.menuItemText}>{t('rename')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={handleDelete}>
-              <Text style={[styles.menuItemText, styles.menuItemDanger]}>Delete</Text>
+              <Text style={[styles.menuItemText, styles.menuItemDanger]}>{t('delete')}</Text>
             </TouchableOpacity>
             {isFolder && (
               <>
@@ -259,19 +262,19 @@ function TreeNode({
                   style={styles.menuItem}
                   onPress={() => { setShowContextMenu(false); onCreateScript(node.id); }}
                 >
-                  <Text style={styles.menuItemText}>New CLI Script Here</Text>
+                  <Text style={styles.menuItemText}>{t('newCLIScriptHere')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => { setShowContextMenu(false); onCreateUIScript(node.id); }}
                 >
-                  <Text style={styles.menuItemText}>New UI Script Here</Text>
+                  <Text style={styles.menuItemText}>{t('newUIScriptHere')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => { setShowContextMenu(false); onCreateFolder(node.id); }}
                 >
-                  <Text style={styles.menuItemText}>New Folder Here</Text>
+                  <Text style={styles.menuItemText}>{t('newFolderHere')}</Text>
                 </TouchableOpacity>
               </>
             )}

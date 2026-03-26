@@ -62,6 +62,15 @@ pnpm run export:web   # Static export → beta/dist/
 - `beta/src/components/hex-view/hex-view.tsx` — Canvas hex renderer (React)
 - `beta/src/contexts/hex-editor-store.ts` — Zustand store with tab, selection, color, master-tab state
 
+## i18n (Beta app)
+- **Library:** i18next + react-i18next
+- **Config:** `beta/src/locales/index.tsx` — initializes i18next, exports `useTranslation` and `I18nextProvider`
+- **Translations:** `beta/src/locales/en.ts` — flat key-value object with all UI strings
+- **Usage:** Components call `const { t } = useTranslation()` and render `t('keyName')`. Dynamic values use i18next interpolation: `t('bytesRange', { start, end, count })`.
+- **Adding a language:** Create `beta/src/locales/<lang>.ts` with the same keys as `en.ts`, then register it in the `resources` object in `index.tsx`.
+- **Adding a new UI string:** Add the key to `en.ts` (and any other locale files), then use `t('key')` in the component. Never hard-code user-visible English strings in components.
+- **Brand name** "Hex Works" and technical identifiers (uint8, float32le, etc.) stay hard-coded — they are not translated.
+
 ## Notes
 - The beta banner in `views/index.html` shows on every page load (not persisted)
 - "Apply colorset to all tabs" feature: `masterTabId` in the store designates a tab whose color buffer is used for rendering/editing across all tabs

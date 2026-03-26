@@ -34,14 +34,14 @@ export function StatusBar() {
     <View style={styles.container}>
       {/* Position info */}
       <View style={styles.section}>
-        <Text style={styles.label}>Offset:</Text>
+        <Text style={styles.label}>{t('offset')}</Text>
         <Text style={styles.value}>
           0x{cursorPosition.toString(16).toUpperCase().padStart(8, '0')}
         </Text>
         <Text style={styles.separator}>|</Text>
-        <Text style={styles.label}>Ln:</Text>
+        <Text style={styles.label}>{t('ln')}</Text>
         <Text style={styles.value}>{line}</Text>
-        <Text style={styles.label}>Col:</Text>
+        <Text style={styles.label}>{t('col')}</Text>
         <Text style={styles.value}>{col}</Text>
       </View>
 
@@ -49,18 +49,18 @@ export function StatusBar() {
       {hasSelection && (
         <View style={styles.section}>
           <Text style={styles.separator}>|</Text>
-          <Text style={styles.label}>Sel:</Text>
+          <Text style={styles.label}>{t('sel')}</Text>
           <Text style={styles.value}>
             0x{selStart.toString(16).toUpperCase()} - 0x{selEnd.toString(16).toUpperCase()}
           </Text>
-          <Text style={styles.value}>({selEnd - selStart + 1} bytes)</Text>
+          <Text style={styles.value}>({selEnd - selStart + 1} {t('bytes')})</Text>
         </View>
       )}
 
       {/* Edit mode indicator */}
       <View style={styles.rightSection}>
         <Text style={[styles.indicator, isEditing && styles.indicatorActive]}>
-          {isEditing ? 'EDIT' : 'VIEW'}
+          {isEditing ? t('editMode') : t('viewMode')}
         </Text>
         <Text style={styles.separator}>|</Text>
         <Text style={styles.text}>

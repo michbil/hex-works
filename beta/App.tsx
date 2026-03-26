@@ -4,7 +4,7 @@ import { StyleSheet, View, Text, Platform, Modal, ScrollView, TouchableOpacity }
 import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel,HeatmapPanel, GraphPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
 import { Drawer } from './src/components/layout';
 import { FileMenu } from './src/components/layout/header';
-import { I18nextProvider, i18n } from './src/locales';
+import { I18nextProvider, i18n, useTranslation } from './src/locales';
 import { usePersistence } from './src/hooks/use-persistence';
 import { useDropFile } from './src/hooks/use-drop-file';
 import { useMobile } from './src/hooks/use-mobile';
@@ -12,6 +12,7 @@ import { useMobile } from './src/hooks/use-mobile';
 type RightPanelTab = 'inspector' | 'search' | 'script' | 'graph' | 'heatmap';
 
 function HexEditorApp() {
+  const { t } = useTranslation();
   usePersistence();
   useDropFile();
   const { isMobile } = useMobile();
@@ -78,7 +79,7 @@ function HexEditorApp() {
           onPress={() => setRightTab('inspector')}
         >
           <Text style={[styles.panelTabText, rightTab === 'inspector' && styles.panelTabTextActive]}>
-            Inspector
+            {t('inspector')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -86,7 +87,7 @@ function HexEditorApp() {
           onPress={() => setRightTab('search')}
         >
           <Text style={[styles.panelTabText, rightTab === 'search' && styles.panelTabTextActive]}>
-            Search
+            {t('search')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -94,7 +95,7 @@ function HexEditorApp() {
           onPress={() => setRightTab('script')}
         >
           <Text style={[styles.panelTabText, rightTab === 'script' && styles.panelTabTextActive]}>
-            Script
+            {t('script')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -102,15 +103,15 @@ function HexEditorApp() {
           onPress={() => setRightTab('graph')}
         >
           <Text style={[styles.panelTabText, rightTab === 'graph' && styles.panelTabTextActive]}>
-            Graph
-             </Text>
+            {t('graph')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.panelTab, rightTab === 'heatmap' && styles.panelTabActive]}
           onPress={() => setRightTab('heatmap')}
         >
           <Text style={[styles.panelTabText, rightTab === 'heatmap' && styles.panelTabTextActive]}>
-            Heatmap
+            {t('heatmap')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -204,32 +205,32 @@ function HexEditorApp() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Hex Works Help</Text>
+            <Text style={styles.modalTitle}>{t('helpTitle')}</Text>
             <ScrollView style={styles.helpContent}>
-              <Text style={styles.helpSection}>Keyboard Shortcuts:</Text>
-              <Text style={styles.helpText}>• Arrow keys: Navigate bytes</Text>
-              <Text style={styles.helpText}>• Page Up/Down: Scroll pages</Text>
-              <Text style={styles.helpText}>• Home/End: Go to start/end of line</Text>
-              <Text style={styles.helpText}>• Ctrl+Home/End: Go to start/end of file</Text>
-              <Text style={styles.helpText}>• 0-9, A-F: Enter hex values (in edit mode)</Text>
-              <Text style={styles.helpText}>• Click in ASCII area: Enter text mode</Text>
+              <Text style={styles.helpSection}>{t('helpKeyboardShortcuts')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpArrowKeys')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpPageUpDown')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpHomeEnd')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpCtrlHomeEnd')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpHexInput')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpAsciiMode')}</Text>
 
-              <Text style={styles.helpSection}>Mouse Actions:</Text>
-              <Text style={styles.helpText}>• Click: Position cursor</Text>
-              <Text style={styles.helpText}>• Drag: Select range</Text>
-              <Text style={styles.helpText}>• Scroll wheel: Scroll view</Text>
+              <Text style={styles.helpSection}>{t('helpMouseActions')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpClick')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpDrag')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpScroll')}</Text>
 
-              <Text style={styles.helpSection}>Features:</Text>
-              <Text style={styles.helpText}>• Color marking for byte ranges</Text>
-              <Text style={styles.helpText}>• Hex and text search</Text>
-              <Text style={styles.helpText}>• Inspector panel with multiple interpretations</Text>
-              <Text style={styles.helpText}>• Big-endian and little-endian views</Text>
+              <Text style={styles.helpSection}>{t('helpFeatures')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpColorMarking')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpHexTextSearch')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpInspectorPanel')}</Text>
+              <Text style={styles.helpText}>{'• '}{t('helpEndianViews')}</Text>
             </ScrollView>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowHelp(false)}
             >
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={styles.closeButtonText}>{t('close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
