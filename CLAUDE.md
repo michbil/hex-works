@@ -12,7 +12,7 @@ Online hex editor for binary files (EEPROM dumps, firmware, etc). Two versions l
 - **State:** Angular scopes, `localforage` for persistence via IndexedDB
 
 ### Beta app (React)
-- **Framework:** React 19 + Expo 54 + TypeScript
+- **Framework:** React 19 + Expo 55 + TypeScript
 - **Source:** `beta/src/` (components, hooks, contexts, utils)
 - **Entry point:** `beta/index.ts` → `beta/App.tsx`
 - **State:** Zustand store (`beta/src/contexts/hex-editor-store.ts`)
