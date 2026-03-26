@@ -122,8 +122,8 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
     canvas.width = w;
     canvas.height = h;
 
-    // CSS: stretch to fill wrapper
-    canvas.style.width = '100%';
+    // CSS: native width, stretch vertically to fill wrapper
+    canvas.style.width = `${w}px`;
     canvas.style.height = '100%';
     canvas.style.imageRendering = 'pixelated';
 
