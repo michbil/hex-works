@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
-import { useLocale } from '../../locales';
+import { useTranslation } from '../../locales';
 import { useMobile } from '../../hooks/use-mobile';
 
 // Color palette matching the Angular version
@@ -27,7 +27,7 @@ interface ColorPickerProps {
 
 export function ColorPicker({ onColorSelect }: ColorPickerProps) {
   const { buffer, selection, cursorPosition, masterTabId, tabs, activeTabIndex, setMasterTab, getColorBuffer } = useHexEditorStore();
-  const { t } = useLocale();
+  const { t } = useTranslation();
   const { isMobile } = useMobile();
 
   const isMaster = masterTabId != null && tabs[activeTabIndex]?.id === masterTabId;

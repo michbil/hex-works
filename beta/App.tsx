@@ -4,7 +4,7 @@ import { StyleSheet, View, Text, Platform, Modal, ScrollView, TouchableOpacity }
 import { HexView, Inspector, SearchPanel, ColorPicker, ScriptPanel,HeatmapPanel, GraphPanel, Header, StatusBar as AppStatusBar, TabBar } from './src/components';
 import { Drawer } from './src/components/layout';
 import { FileMenu } from './src/components/layout/header';
-import { LocaleProvider } from './src/locales';
+import { I18nextProvider, i18n } from './src/locales';
 import { usePersistence } from './src/hooks/use-persistence';
 import { useDropFile } from './src/hooks/use-drop-file';
 import { useMobile } from './src/hooks/use-mobile';
@@ -242,9 +242,9 @@ function HexEditorApp() {
 
 export default function App() {
   return (
-    <LocaleProvider>
+    <I18nextProvider i18n={i18n}>
       <HexEditorApp />
-    </LocaleProvider>
+    </I18nextProvider>
   );
 }
 

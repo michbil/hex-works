@@ -5,11 +5,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
-import { useLocale } from '../../locales';
+import { useTranslation } from '../../locales';
 import { version } from '../../../package.json';
 
 export function StatusBar() {
-  const { t } = useLocale();
+  const { t } = useTranslation();
   const { buffer, cursorPosition, selection, isEditing, bytesPerLine } = useHexEditorStore();
 
   if (!buffer) {

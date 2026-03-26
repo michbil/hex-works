@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useFileHandler } from '../../hooks/use-file-handler';
 import { useHexEditorStore } from '../../contexts/hex-editor-store';
-import { useLocale } from '../../locales';
+import { useTranslation } from '../../locales';
 import { formatFileSize } from '../../utils/helpers';
 
 interface HeaderProps {
@@ -27,7 +27,7 @@ export function Header({
   onLeftMenuPress,
   onRightMenuPress,
 }: HeaderProps) {
-  const { t } = useLocale();
+  const { t } = useTranslation();
   const { openFile, saveFile, createNewFile, fileName, fileSize, isModified } = useFileHandler();
   const { buffer } = useHexEditorStore();
 
@@ -142,7 +142,7 @@ export function FileMenu({
   onClose: () => void;
   onHelpPress?: () => void;
 }) {
-  const { t } = useLocale();
+  const { t } = useTranslation();
   const { openFile, saveFile, createNewFile, fileName, fileSize, isModified } = useFileHandler();
   const { buffer } = useHexEditorStore();
 
