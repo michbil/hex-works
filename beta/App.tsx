@@ -33,7 +33,7 @@ function HexEditorApp() {
     document.head.appendChild(style);
 
     // Ensure viewport meta prevents zoom
-    let meta = document.querySelector('meta[name="viewport"]');
+    const meta = document.querySelector('meta[name="viewport"]');
     if (meta) {
       meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
     }
@@ -141,7 +141,7 @@ function HexEditorApp() {
       )}
       {rightTab === 'heatmap' && (
         <View testID="heatmap-panel" style={{flex: 1}}>
-          <HeatmapPanel onClose={() => setRightTab('inspector')} />
+          <HeatmapPanel />
         </View>
       )}
     </>

@@ -215,7 +215,7 @@ export function TabBar() {
                     min="1"
                     value={resizeValue}
                     onChange={(e) => setResizeValue(e.target.value)}
-                    onKeyDown={handleResizeKeyDown as any}
+                    onKeyDown={handleResizeKeyDown as unknown as React.KeyboardEventHandler}
                     style={{
                       width: 120,
                       padding: '3px 6px',

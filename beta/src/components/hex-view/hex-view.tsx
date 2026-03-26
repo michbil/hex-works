@@ -617,7 +617,7 @@ export function HexView({
       }
     };
 
-    const onTouchEnd = (e: TouchEvent) => {
+    const onTouchEnd = (_e: TouchEvent) => {
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
@@ -913,7 +913,7 @@ export function HexView({
   };
 
   // Hidden input handler for mobile keyboard
-  const handleHiddenInput = (e: any) => {
+  const handleHiddenInput = (e: React.FormEvent<HTMLInputElement>) => {
     const input = e.currentTarget as HTMLInputElement;
     const value = input.value;
     if (!value || !buffer) {
@@ -980,7 +980,7 @@ export function HexView({
         onMouseDown={isMobile ? undefined : (e) => handleMouseEvent(e, 'down')}
         onMouseUp={isMobile ? undefined : (e) => handleMouseEvent(e, 'up')}
         onMouseMove={isMobile ? undefined : (e) => handleMouseEvent(e, 'move')}
-        onKeyDown={isMobile ? undefined : handleKeyDown as any}
+        onKeyDown={isMobile ? undefined : handleKeyDown as unknown as React.KeyboardEventHandler}
       />
       <canvas
         ref={cursorCanvasRef}
@@ -1130,10 +1130,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-  } as any,
+  },
   cursorCanvas: {
     pointerEvents: 'none',
-  } as any,
+  },
 });
 
 export default HexView;

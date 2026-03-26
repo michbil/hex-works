@@ -65,9 +65,8 @@ function parseSFC(code: string): { template: string; script: string; style: stri
  * Compile a template string to a Vue render function.
  * The compiled code references 'Vue' for runtime helpers, which we supply via new Function.
  */
-function compileTemplate(template: string): Function {
+function compileTemplate(template: string): (...args: unknown[]) => unknown {
   const { code } = compile(template, { mode: 'function', hoistStatic: false });
-  // eslint-disable-next-line no-new-func
   return new Function('Vue', code)(Vue);
 }
 
@@ -78,7 +77,6 @@ function compileTemplate(template: string): Function {
 function evalScriptBlock(script: string): Record<string, unknown> {
   const transformed = script.replace(/\bexport\s+default\b/, 'exports.default =');
   const moduleExports: Record<string, unknown> = {};
-  // eslint-disable-next-line no-new-func
   new Function('exports', transformed)(moduleExports);
   return (moduleExports.default as Record<string, unknown>) ?? {};
 }
@@ -136,7 +134,7 @@ export function mountUIScript(
     return {
       handle: {
         unmount() {
-          try { app.unmount(); } catch {}
+          try { app.unmount(); } catch { /* unmount may fail if already disposed */ }
           styleEl?.remove();
         },
       },

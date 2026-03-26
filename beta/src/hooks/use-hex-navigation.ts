@@ -151,8 +151,6 @@ export function useHexKeyboard() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  return { handleKeyDown };
 }
 
 export default useHexNavigation;

@@ -398,10 +398,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 2,
-    outlineStyle: 'none',
-  } as any,
+  },
   contextOverlay: {
-    position: 'fixed' as any,
+    position: 'absolute' as const,
     top: 0,
     left: 0,
     right: 0,

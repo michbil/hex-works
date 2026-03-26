@@ -8,5 +8,6 @@ export function useAnimatedValue(initialValue: number): Animated.Value {
   if (ref.current === null) {
     ref.current = new Animated.Value(initialValue);
   }
+  // eslint-disable-next-line
   return ref.current;
 }
