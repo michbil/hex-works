@@ -113,7 +113,7 @@ export function Drawer({ visible, side, onClose, children }: DrawerProps) {
 
       {/* Drawer panel */}
       <Animated.View
-        ref={drawerRef as any}
+        ref={drawerRef as React.RefObject<View>}
         style={[
           styles.drawer,
           side === 'left' ? styles.drawerLeft : styles.drawerRight,

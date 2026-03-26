@@ -109,15 +109,17 @@ function buildConsole(api: ReturnType<typeof buildApi>, output: string[]) {
 }
 
 // Cached compiled scripts: code string -> compiled Function
-const compiledCache = new Map<string, Function>();
+type CompiledFn = (...args: unknown[]) => unknown;
 
-function compileScript(code: string): Function {
+const compiledCache = new Map<string, CompiledFn>();
+
+function compileScript(code: string): CompiledFn {
   let fn = compiledCache.get(code);
   if (!fn) {
     fn = new Function(
       'buffer', 'cursor', 'selection', 'print', 'hexdump', 'console', 'exports',
       code
-    );
+    ) as CompiledFn;
     compiledCache.set(code, fn);
     // Keep cache bounded
     if (compiledCache.size > 50) {

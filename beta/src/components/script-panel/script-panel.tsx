@@ -92,10 +92,17 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     activeScriptRef.current = activeScript;
   }, [activeScript]);
 
-  // Auto-save callback ref — called by CodeMirror on doc change.
-  const onChangeRef = useRef(() => {});
+  // Mutable callback bridge for CodeMirror onChange. Uses a closure-based holder
+  // instead of useRef to satisfy react-hooks/refs and react-hooks/immutability.
+  const [onChangeBridge] = useState(() => {
+    let handler = () => {};
+    return {
+      invoke: () => handler(),
+      setHandler: (fn: () => void) => { handler = fn; },
+    };
+  });
   useEffect(() => {
-    onChangeRef.current = () => {
+    onChangeBridge.setHandler(() => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
         const script = activeScriptRef.current;
@@ -105,12 +112,12 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
           registry.saveCode(script, code).catch(console.error);
         }
       }, 500);
-    };
+    });
   });
 
   // Build CodeMirror extensions (stable reference, built once)
   const [extensions] = useState(() =>
-    buildExtensions(() => onChangeRef.current()),
+    buildExtensions(onChangeBridge.invoke),
   );
 
   // Ref callback: create/destroy CodeMirror when the div mounts/unmounts.
@@ -152,8 +159,6 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
     uiHandleRef.current?.unmount();
     uiHandleRef.current = null;
     container.innerHTML = "";
-    setUiError(null);
-    setUiRunning(false);
 
     const code = viewRef.current?.state.doc.toString() ?? activeCode;
     const { handle, error } = mountUIScript(
@@ -165,7 +170,9 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
 
     if (error) {
       setUiError(error);
+      setUiRunning(false);
     } else {
+      setUiError(null);
       uiHandleRef.current = handle;
       setUiRunning(true);
     }
@@ -174,7 +181,6 @@ export function ScriptPanel({ onClose, onBufferModified }: ScriptPanelProps) {
       uiHandleRef.current?.unmount();
       uiHandleRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeScript?.id, activeCode]); // remount when code finishes loading
 
   // --- Script library actions ---

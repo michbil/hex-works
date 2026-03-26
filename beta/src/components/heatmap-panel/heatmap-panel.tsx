@@ -4,21 +4,24 @@
  * Compares all open tabs byte-by-byte and renders:
  *  1. A canvas heatmap where each cell = one byte address,
  *     colored by how many tabs differ at that offset.
- *  2. A detail table for the selected address showing each
+ *  2. A detail inspector for the selected address showing each
  *     tab's value and interpretation.
- *  3. A filterable list of only the addresses that changed.
  */
 
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
-import { useHexEditorStore } from '../../contexts/hex-editor-store';
-import { BinaryBuffer } from '../../utils/binbuf';
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import { View, Text, StyleSheet, Platform } from "react-native";
+import { useHexEditorStore } from "../../contexts/hex-editor-store";
 
 // Heatmap color scale: 0 changes → dark, max changes → bright red
 function heatColor(changeCount: number, maxChanges: number): string {
-  if (maxChanges === 0 || changeCount === 0) return '#1a1a2e';
+  if (maxChanges === 0 || changeCount === 0) return "#1a1a2e";
   const t = changeCount / maxChanges;
-  // Interpolate: dark blue → yellow → red
   if (t <= 0.5) {
     const s = t * 2;
     const r = Math.round(30 + s * 225);
@@ -27,186 +30,164 @@ function heatColor(changeCount: number, maxChanges: number): string {
     return `rgb(${r},${g},${b})`;
   }
   const s = (t - 0.5) * 2;
-  const r = Math.round(255);
+  const r = 255;
   const g = Math.round(225 * (1 - s));
-  const b = 0;
-  return `rgb(${r},${g},${b})`;
+  return `rgb(${r},${g},0)`;
 }
 
-type FilterMode = 'all' | 'changed' | 'constant';
-
-interface DiffEntry {
-  offset: number;
-  uniqueValues: number;
-  min: number;
-  max: number;
-  values: number[];
-  changeCount: number;
-}
-
-export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
+export function HeatmapPanel() {
   const tabs = useHexEditorStore((s) => s.tabs);
-  const setCursorPosition = useHexEditorStore((s) => s.setCursorPosition);
-  const setSelection = useHexEditorStore((s) => s.setSelection);
   const updateHeatmap = useHexEditorStore((s) => s.updateHeatmap);
+  const changeCounts = useHexEditorStore((s) => s.heatmapChangeCounts);
+  const maxChanges = useHexEditorStore((s) => s.heatmapMaxChanges);
+  const bytesPerLine = useHexEditorStore((s) => s.bytesPerLine);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [selectedOffset, setSelectedOffset] = useState<number | null>(null);
-  const [filterMode, setFilterMode] = useState<FilterMode>('changed');
-  const [hoveredOffset, setHoveredOffset] = useState<number | null>(null);
+  const wrapRef = useRef<View>(null);
 
-  // Cell sizing
+  const [wrapHeight, setWrapHeight] = useState(0);
+
+  // Fixed columns matching hex dump layout
+  const cols = bytesPerLine;
   const cellSize = 6;
   const cellGap = 1;
+  const step = cellSize + cellGap;
 
-  // Compute diff data across all tabs
-  const diffData = useMemo(() => {
-    if (tabs.length < 2) return [];
-    const buffers = tabs.map((t) => t.buffer);
-    return BinaryBuffer.compareMultiple(buffers);
-  }, [tabs]);
+  const dataLength = changeCounts?.length ?? 0;
 
-  const maxChanges = useMemo(
-    () => Math.max(1, ...diffData.map((d) => d.changeCount)),
-    [diffData],
-  );
+  // Derive visible rows from measured wrapper height
+  const visibleRows =
+    wrapHeight > 0 ? Math.max(1, Math.floor(wrapHeight / step)) : 16;
+
+  // Compute summary stats once
+  const changedCount = useMemo(() => {
+    if (!changeCounts) return 0;
+    let count = 0;
+    for (let i = 0; i < changeCounts.length; i++) {
+      if (changeCounts[i] > 0) count++;
+    }
+    return count;
+  }, [changeCounts]);
 
   // Push comparison data to store so hex-view can render inline heatmap
   useEffect(() => {
     updateHeatmap();
     return () => {
-      // Clear heatmap when panel unmounts
-      useHexEditorStore.setState({ heatmapData: null });
+      useHexEditorStore.setState({
+        heatmapChangeCounts: null,
+        heatmapMaxChanges: 0,
+      });
     };
   }, [tabs, updateHeatmap]);
 
-  // Filtered list for the table
-  const filteredEntries = useMemo(() => {
-    return diffData
-      .map((d, i) => ({ offset: i, ...d }))
-      .filter((d) => {
-        if (filterMode === 'changed') return d.changeCount > 0;
-        if (filterMode === 'constant') return d.changeCount === 0;
-        return true;
-      });
-  }, [diffData, filterMode]);
+  // Enable scroll sync while heatmap panel is open
+  useEffect(() => {
+    useHexEditorStore.getState().setSyncScroll(true);
+    return () => {
+      useHexEditorStore.getState().setSyncScroll(false);
+    };
+  }, []);
 
-  // Draw heatmap canvas
-  const drawHeatmap = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || diffData.length === 0) return;
-
-    const containerWidth = canvas.parentElement?.clientWidth ?? 300;
-    const cols = Math.max(1, Math.floor(containerWidth / (cellSize + cellGap)));
-    const rows = Math.ceil(diffData.length / cols);
-
-    canvas.width = cols * (cellSize + cellGap);
-    canvas.height = rows * (cellSize + cellGap);
-    canvas.style.width = `${canvas.width}px`;
-    canvas.style.height = `${canvas.height}px`;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.fillStyle = '#0d0d1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    for (let i = 0; i < diffData.length; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = col * (cellSize + cellGap);
-      const y = row * (cellSize + cellGap);
-
-      ctx.fillStyle = heatColor(diffData[i].changeCount, maxChanges);
-      ctx.fillRect(x, y, cellSize, cellSize);
-
-      // Highlight selected
-      if (i === selectedOffset) {
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x - 0.5, y - 0.5, cellSize + 1, cellSize + 1);
+  // Pre-compute RGB LUT for each possible changeCount
+  const colorLUT = useMemo(() => {
+    if (maxChanges === 0) return null;
+    // Store [r, g, b] per count
+    const lut = new Uint8Array((maxChanges + 1) * 3);
+    for (let c = 0; c <= maxChanges; c++) {
+      const off = c * 3;
+      if (c === 0) {
+        lut[off] = 26;
+        lut[off + 1] = 26;
+        lut[off + 2] = 46; // #1a1a2e
+      } else {
+        const t = c / maxChanges;
+        if (t <= 0.5) {
+          const s = t * 2;
+          lut[off] = Math.round(30 + s * 225);
+          lut[off + 1] = Math.round(30 + s * 195);
+          lut[off + 2] = Math.round(80 * (1 - s));
+        } else {
+          const s = (t - 0.5) * 2;
+          lut[off] = 255;
+          lut[off + 1] = Math.round(225 * (1 - s));
+          lut[off + 2] = 0;
+        }
       }
     }
-  }, [diffData, maxChanges, selectedOffset, cellSize, cellGap]);
+    return lut;
+  }, [maxChanges]);
+
+  // Draw heatmap canvas — grid with gaps, fills available height
+  const drawHeatmap = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !changeCounts || dataLength === 0 || !colorLUT) return;
+
+    const w = cols * step + cellGap;
+    const h = visibleRows * step + cellGap;
+    canvas.width = w;
+    canvas.height = h;
+
+    // CSS: native width, stretch vertically to fill wrapper
+    canvas.style.width = `${w}px`;
+    canvas.style.height = "100%";
+    canvas.style.imageRendering = "pixelated";
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Background (gap color)
+    ctx.fillStyle = "#0d0d1a";
+    ctx.fillRect(0, 0, w, h);
+
+    // Pre-build fillStyle strings from LUT
+    const colorStrings = new Array<string>(maxChanges + 1);
+    for (let i = 0; i <= maxChanges; i++) {
+      const off = i * 3;
+      colorStrings[i] =
+        `rgb(${colorLUT[off]},${colorLUT[off + 1]},${colorLUT[off + 2]})`;
+    }
+
+    const startByte = 0;
+
+    for (let r = 0; r < visibleRows; r++) {
+      const y = cellGap + r * step;
+      for (let c = 0; c < cols; c++) {
+        const byteIdx = startByte + r * cols + c;
+        const x = cellGap + c * step;
+        if (byteIdx < dataLength) {
+          ctx.fillStyle = colorStrings[changeCounts[byteIdx]];
+        } else {
+          ctx.fillStyle = "#1a1a2e";
+        }
+        ctx.fillRect(x, y, cellSize, cellSize);
+      }
+    }
+  }, [
+    changeCounts,
+    dataLength,
+    maxChanges,
+    cols,
+    visibleRows,
+    colorLUT,
+    step,
+    cellSize,
+    cellGap,
+  ]);
 
   useEffect(() => {
     drawHeatmap();
   }, [drawHeatmap]);
 
-  // Handle canvas click
-  const handleCanvasClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const cols = Math.max(
-        1,
-        Math.floor(canvas.width / (cellSize + cellGap)),
-      );
-      const col = Math.floor(x / (cellSize + cellGap));
-      const row = Math.floor(y / (cellSize + cellGap));
-      const offset = row * cols + col;
-      if (offset >= 0 && offset < diffData.length) {
-        setSelectedOffset(offset);
-        setCursorPosition(offset);
-      }
-    },
-    [diffData.length, cellSize, cellGap, setCursorPosition],
-  );
-
-  const handleCanvasMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const cols = Math.max(
-        1,
-        Math.floor(canvas.width / (cellSize + cellGap)),
-      );
-      const col = Math.floor(x / (cellSize + cellGap));
-      const row = Math.floor(y / (cellSize + cellGap));
-      const offset = row * cols + col;
-      if (offset >= 0 && offset < diffData.length) {
-        setHoveredOffset(offset);
-      } else {
-        setHoveredOffset(null);
-      }
-    },
-    [diffData.length, cellSize, cellGap],
-  );
-
-  // Navigate hex view to an address from the table
-  const goToOffset = useCallback(
-    (offset: number) => {
-      setSelectedOffset(offset);
-      setCursorPosition(offset);
-      setSelection(offset, offset);
-    },
-    [setCursorPosition, setSelection],
-  );
-
-  const toHex = (v: number, pad: number) =>
-    v >= 0
-      ? v.toString(16).toUpperCase().padStart(pad, '0')
-      : '--';
-
   if (tabs.length < 2) {
     return (
       <View style={styles.container}>
         <Text style={styles.placeholder}>
-          Open 2+ dumps in separate tabs to compare.{'\n'}
+          Open 2+ dumps in separate tabs to compare.{"\n"}
           Right-click the tab bar to load files.
         </Text>
       </View>
     );
   }
-
-  const inspectOffset = selectedOffset ?? hoveredOffset;
-  const inspectData = inspectOffset !== null ? diffData[inspectOffset] : null;
 
   return (
     <View style={styles.container}>
@@ -214,152 +195,55 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
       <View style={styles.header}>
         <Text style={styles.title}>Heatmap Compare</Text>
         <Text style={styles.subtitle}>
-          {tabs.length} dumps &middot; {diffData.length} bytes &middot;{' '}
-          {diffData.filter((d) => d.changeCount > 0).length} differ
+          {tabs.length} dumps &middot; {dataLength} bytes &middot;{" "}
+          {changedCount} differ &middot; 
         </Text>
       </View>
 
       {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendRow}>
-          <View style={[styles.legendSwatch, { backgroundColor: '#1a1a2e' }]} />
+          <View style={[styles.legendSwatch, { backgroundColor: "#1a1a2e" }]} />
           <Text style={styles.legendLabel}>No change</Text>
         </View>
         <View style={styles.legendRow}>
-          <View style={[styles.legendSwatch, { backgroundColor: heatColor(Math.ceil(maxChanges * 0.5), maxChanges) }]} />
+          <View
+            style={[
+              styles.legendSwatch,
+              {
+                backgroundColor: heatColor(
+                  Math.ceil(maxChanges * 0.5),
+                  maxChanges,
+                ),
+              },
+            ]}
+          />
           <Text style={styles.legendLabel}>Some</Text>
         </View>
         <View style={styles.legendRow}>
-          <View style={[styles.legendSwatch, { backgroundColor: heatColor(maxChanges, maxChanges) }]} />
+          <View
+            style={[
+              styles.legendSwatch,
+              { backgroundColor: heatColor(maxChanges, maxChanges) },
+            ]}
+          />
           <Text style={styles.legendLabel}>All differ</Text>
         </View>
       </View>
 
-      {/* Heatmap canvas */}
-      {Platform.OS === 'web' && (
-        <View style={styles.canvasWrap}>
+      {/* Heatmap canvas — fills remaining vertical space */}
+      {Platform.OS === "web" && (
+        <View
+          ref={wrapRef}
+          style={styles.canvasWrap}
+          onLayout={(e) => setWrapHeight(e.nativeEvent.layout.height)}
+        >
           <canvas
             ref={canvasRef}
-            onClick={handleCanvasClick as any}
-            onMouseMove={handleCanvasMove as any}
-            onMouseLeave={() => setHoveredOffset(null)}
-            style={{ cursor: 'crosshair', display: 'block' }}
+            style={{ cursor: "crosshair", display: "block" }}
           />
         </View>
       )}
-
-      {/* Tooltip for hovered/selected offset */}
-      {inspectData && inspectOffset !== null && (
-        <View style={styles.detail}>
-          <Text style={styles.detailTitle}>
-            Offset 0x{toHex(inspectOffset, 4)} &middot;{' '}
-            {inspectData.changeCount}/{tabs.length - 1} differ &middot;{' '}
-            {inspectData.uniqueValues} unique
-          </Text>
-          <View style={styles.detailTable}>
-            {tabs.map((tab, i) => {
-              const val = inspectData.values[i];
-              const differs = i > 0 && val !== inspectData.values[0];
-              return (
-                <View
-                  key={tab.id}
-                  style={[styles.detailRow, differs && styles.detailRowDiff]}
-                >
-                  <Text
-                    style={styles.detailFileName}
-                    numberOfLines={1}
-                  >
-                    {tab.fileName}
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    0x{toHex(val, 2)}
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    {val >= 0 ? val : '--'}
-                  </Text>
-                  <Text style={styles.detailBits}>
-                    {val >= 0 ? val.toString(2).padStart(8, '0') : '--------'}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
-
-      {/* Filter bar */}
-      <View style={styles.filterBar}>
-        {(['changed', 'all', 'constant'] as FilterMode[]).map((mode) => (
-          <TouchableOpacity
-            key={mode}
-            style={[styles.filterBtn, filterMode === mode && styles.filterBtnActive]}
-            onPress={() => setFilterMode(mode)}
-          >
-            <Text
-              style={[
-                styles.filterBtnText,
-                filterMode === mode && styles.filterBtnTextActive,
-              ]}
-            >
-              {mode === 'changed'
-                ? `Changed (${diffData.filter((d) => d.changeCount > 0).length})`
-                : mode === 'constant'
-                  ? `Constant (${diffData.filter((d) => d.changeCount === 0).length})`
-                  : `All (${diffData.length})`}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Address table */}
-      <ScrollView style={styles.tableScroll}>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.tableCell, styles.tableCellAddr]}>Address</Text>
-          {tabs.map((tab) => (
-            <Text key={tab.id} style={[styles.tableCell, styles.tableCellVal]} numberOfLines={1}>
-              {tab.fileName.slice(0, 10)}
-            </Text>
-          ))}
-          <Text style={[styles.tableCell, styles.tableCellVal]}>Unique</Text>
-        </View>
-        {filteredEntries.slice(0, 500).map((entry) => (
-          <TouchableOpacity
-            key={entry.offset}
-            style={[
-              styles.tableRow,
-              entry.offset === selectedOffset && styles.tableRowSelected,
-            ]}
-            onPress={() => goToOffset(entry.offset)}
-          >
-            <Text style={[styles.tableCell, styles.tableCellAddr]}>
-              0x{toHex(entry.offset, 4)}
-            </Text>
-            {entry.values.map((val, i) => {
-              const differs = i > 0 && val !== entry.values[0];
-              return (
-                <Text
-                  key={i}
-                  style={[
-                    styles.tableCell,
-                    styles.tableCellVal,
-                    differs && styles.tableCellDiff,
-                  ]}
-                >
-                  {toHex(val, 2)}
-                </Text>
-              );
-            })}
-            <Text style={[styles.tableCell, styles.tableCellVal]}>
-              {entry.uniqueValues}
-            </Text>
-          </TouchableOpacity>
-        ))}
-        {filteredEntries.length > 500 && (
-          <Text style={styles.truncated}>
-            Showing 500 / {filteredEntries.length} entries
-          </Text>
-        )}
-      </ScrollView>
     </View>
   );
 }
@@ -367,38 +251,38 @@ export function HeatmapPanel({ onClose }: { onClose?: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: "#1e1e1e",
   },
   placeholder: {
-    color: '#6c757d',
+    color: "#6c757d",
     fontSize: 13,
     padding: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   header: {
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: "#333",
   },
   title: {
-    color: '#e0e0e0',
+    color: "#e0e0e0",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   subtitle: {
-    color: '#888',
+    color: "#888",
     fontSize: 11,
     marginTop: 2,
   },
   legend: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 10,
     paddingVertical: 6,
     gap: 12,
   },
   legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   legendSwatch: {
@@ -407,122 +291,55 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   legendLabel: {
-    color: '#aaa',
+    color: "#aaa",
     fontSize: 10,
   },
   canvasWrap: {
+    flex: 1,
     paddingHorizontal: 10,
     paddingBottom: 8,
-    maxHeight: 160,
-    overflow: 'hidden',
   },
   detail: {
     padding: 10,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: "#333",
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: "#333",
   },
   detailTitle: {
-    color: '#e0e0e0',
+    color: "#e0e0e0",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 6,
   },
   detailTable: {
     gap: 2,
   },
   detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 2,
     gap: 8,
   },
   detailRowDiff: {
-    backgroundColor: 'rgba(229,115,115,0.15)',
+    backgroundColor: "rgba(229,115,115,0.15)",
   },
   detailFileName: {
-    color: '#aaa',
+    color: "#aaa",
     fontSize: 11,
     width: 80,
   },
   detailValue: {
-    color: '#e0e0e0',
+    color: "#e0e0e0",
     fontSize: 11,
-    fontFamily: 'monospace',
+    fontFamily: "monospace",
     width: 36,
-    textAlign: 'right',
+    textAlign: "right",
   },
   detailBits: {
-    color: '#888',
+    color: "#888",
     fontSize: 10,
-    fontFamily: 'monospace',
-  },
-  filterBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    gap: 6,
-  },
-  filterBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 3,
-    backgroundColor: '#2a2a3a',
-  },
-  filterBtnActive: {
-    backgroundColor: '#007bff',
-  },
-  filterBtnText: {
-    color: '#aaa',
-    fontSize: 11,
-  },
-  filterBtnTextActive: {
-    color: '#fff',
-  },
-  tableScroll: {
-    flex: 1,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    backgroundColor: '#252535',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-  },
-  tableRowSelected: {
-    backgroundColor: 'rgba(0,123,255,0.2)',
-  },
-  tableCell: {
-    color: '#ccc',
-    fontSize: 11,
-    fontFamily: 'monospace',
-  },
-  tableCellAddr: {
-    width: 56,
-    fontWeight: '600',
-  },
-  tableCellVal: {
-    width: 40,
-    textAlign: 'center',
-  },
-  tableCellDiff: {
-    color: '#E57373',
-    fontWeight: '600',
-  },
-  truncated: {
-    color: '#666',
-    fontSize: 11,
-    textAlign: 'center',
-    padding: 8,
+    fontFamily: "monospace",
   },
 });
 

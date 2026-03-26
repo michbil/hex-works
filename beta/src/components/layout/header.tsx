@@ -20,8 +20,8 @@ interface HeaderProps {
 }
 
 export function Header({
-  onSearchPress,
-  onScriptPress,
+  onSearchPress: _onSearchPress,
+  onScriptPress: _onScriptPress,
   onHelpPress,
   isMobile,
   onLeftMenuPress,

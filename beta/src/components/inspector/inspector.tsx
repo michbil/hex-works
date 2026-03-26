@@ -93,7 +93,7 @@ function makeFieldStates(): FieldStates {
   };
 }
 
-export function Inspector({}: InspectorProps) {
+export function Inspector(_props: InspectorProps) {
   const buffer = useHexEditorStore((s) => s.buffer);
   const selection = useHexEditorStore((s) => s.selection);
   const cursorPosition = useHexEditorStore((s) => s.cursorPosition);
