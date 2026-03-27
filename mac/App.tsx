@@ -3,8 +3,10 @@ import {View, Text, Pressable, StyleSheet, NativeModules} from 'react-native';
 import {I18nextProvider, useTranslation} from '@shared/locales';
 import i18n from '@shared/locales';
 import {useHexEditorStore} from '@shared/contexts/hex-editor-store';
+import {Inspector} from '@shared/components/inspector/inspector';
 import {HexView} from './src/components/hex-view';
 import {TabBar} from './src/components/layout/tab-bar';
+import {ColorPicker} from './src/components/color-picker';
 import {useMenuBar} from './src/hooks/use-menu-bar';
 import {useFileHandler} from './src/hooks/use-file-handler';
 
@@ -99,6 +101,7 @@ function HexEditorApp() {
       <TabBar />
       <View style={styles.contentRow}>
         <View style={styles.hexViewContainer}>
+          <ColorPicker />
           <HexView />
         </View>
         <View style={styles.rightPanel}>
@@ -122,9 +125,10 @@ function HexEditorApp() {
             ))}
           </View>
           <View style={styles.panelContent}>
-            <Text style={styles.panelPlaceholder}>
-              {rightTab === 'inspector' ? 'Inspector panel' : 'Search panel'}
-            </Text>
+            {rightTab === 'inspector' && <Inspector />}
+            {rightTab === 'search' && (
+              <Text style={styles.panelPlaceholder}>Search panel (coming soon)</Text>
+            )}
           </View>
         </View>
       </View>
