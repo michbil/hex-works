@@ -116,4 +116,23 @@ RCT_EXPORT_METHOD(setWindowTitle:(NSString *)title)
   });
 }
 
+RCT_EXPORT_METHOD(copyToClipboard:(NSString *)text)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSPasteboard *pb = [NSPasteboard generalPasteboard];
+    [pb clearContents];
+    [pb setString:text forType:NSPasteboardTypeString];
+  });
+}
+
+RCT_EXPORT_METHOD(pasteFromClipboard:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSPasteboard *pb = [NSPasteboard generalPasteboard];
+    NSString *text = [pb stringForType:NSPasteboardTypeString];
+    resolve(text ?: @"");
+  });
+}
+
 @end

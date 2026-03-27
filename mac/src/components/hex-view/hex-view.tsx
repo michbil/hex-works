@@ -138,6 +138,8 @@ export function HexView() {
                   setSelection(cursorPosition + 1, cursorPosition + 1);
                 }
               }
+              // Force buffer re-encode for native view
+              useHexEditorStore.setState(s => ({renderKey: s.renderKey + 1}));
             }
             return;
           }

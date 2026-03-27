@@ -8,9 +8,35 @@ private class HexCanvasView: NSView {
 
   override var isFlipped: Bool { true }
   override var wantsDefaultClipping: Bool { false }
+  override var acceptsFirstResponder: Bool { true }
 
   override func draw(_ dirtyRect: NSRect) {
     hexView?.drawContent(in: bounds)
+  }
+
+  override func keyDown(with event: NSEvent) {
+    if event.modifierFlags.contains(.command) {
+      // Let Cmd+ shortcuts propagate to menu bar
+      super.keyDown(with: event)
+    } else {
+      hexView?.handleKeyDown(with: event)
+    }
+  }
+
+  override func mouseDown(with event: NSEvent) {
+    hexView?.handleMouseDown(with: event)
+  }
+
+  override func mouseDragged(with event: NSEvent) {
+    hexView?.handleMouseDragged(with: event)
+  }
+
+  override func mouseUp(with event: NSEvent) {
+    hexView?.handleMouseUp(with: event)
+  }
+
+  override func scrollWheel(with event: NSEvent) {
+    hexView?.handleScrollWheel(with: event)
   }
 }
 
@@ -38,9 +64,13 @@ class HexViewNative: RCTView {
   @objc var onSelectionChange: RCTDirectEventBlock?
   @objc var onScroll: RCTDirectEventBlock?
   @objc var onHexKeyDown: RCTDirectEventBlock?
+  @objc var onByteEdit: RCTDirectEventBlock?
 
-  // Drag selection anchor
+  // Drag selection state (local, for immediate visual feedback)
   private var dragAnchor: Int = -1
+  private var dragSelStart: Int = -1
+  private var dragSelEnd: Int = -1
+  private var isDragging: Bool = false
 
   // MARK: - Decoded data
 
@@ -167,8 +197,16 @@ class HexViewNative: RCTView {
 
     guard bufferData.count > 0, bytesPerLine > 0 else { return }
 
-    let selMin = min(selectionStart, selectionEnd)
-    let selMax = max(selectionStart, selectionEnd)
+    // Use local drag state for immediate feedback, fall back to React props
+    let selMin: Int
+    let selMax: Int
+    if isDragging && dragSelStart >= 0 {
+      selMin = min(dragSelStart, dragSelEnd)
+      selMax = max(dragSelStart, dragSelEnd)
+    } else {
+      selMin = min(selectionStart, selectionEnd)
+      selMax = max(selectionStart, selectionEnd)
+    }
     let hasSelection = selMin != selMax
 
     let cw = charWidth
@@ -196,13 +234,25 @@ class HexViewNative: RCTView {
         let colorCode = byteIndex < colorData.count ? Int(colorData[byteIndex]) : 0
         let isMarked = byteIndex < markedData.count && markedData[byteIndex] != 0
         let isCursor = focused && byteIndex == cursorPosition
-        let isSelected = hasSelection && byteIndex >= selMin && byteIndex < selMax
+        let isSelected = hasSelection && byteIndex >= selMin && byteIndex <= selMax
 
         let hexX = addrW + CGFloat(col) * cw * hexCharWidth
         let asciiX = asciiStartX + CGFloat(col) * cw
 
-        // Background
-        if isCursor {
+        // Check if next byte in row has same highlight (to extend through trailing space)
+        let nextByteIndex = byteIndex + 1
+        let nextInRow = col + 1 < count
+        let nextIsSelected = nextInRow && hasSelection && nextByteIndex >= selMin && nextByteIndex <= selMax
+        let nextColorCode = nextInRow && nextByteIndex < colorData.count ? Int(colorData[nextByteIndex]) : 0
+
+        // Background: selection > cursor > color marker
+        // Use width 3 chars (including space) if next byte has same bg, else 2 chars only
+        if isSelected {
+          let hexW = nextIsSelected ? cw * hexCharWidth : cw * 2
+          Self.selectionColor.setFill()
+          NSRect(x: hexX, y: y, width: hexW, height: lh).fill()
+          NSRect(x: asciiX, y: y, width: cw, height: lh).fill()
+        } else if isCursor && !hasSelection {
           Self.cursorColor.setFill()
           if editNibble == "high" {
             NSRect(x: hexX, y: y, width: cw, height: lh).fill()
@@ -210,13 +260,11 @@ class HexViewNative: RCTView {
             NSRect(x: hexX + cw, y: y, width: cw, height: lh).fill()
           }
           NSRect(x: asciiX, y: y, width: cw, height: lh).fill()
-        } else if isSelected {
-          Self.selectionColor.setFill()
-          NSRect(x: hexX, y: y, width: cw * hexCharWidth, height: lh).fill()
-          NSRect(x: asciiX, y: y, width: cw, height: lh).fill()
         } else if colorCode > 0, colorCode < 8, let color = Self.colorMap[colorCode] {
+          let nextSameColor = nextInRow && nextColorCode == colorCode
+          let hexW = nextSameColor ? cw * hexCharWidth : cw * 2
           color.setFill()
-          NSRect(x: hexX, y: y, width: cw * hexCharWidth, height: lh).fill()
+          NSRect(x: hexX, y: y, width: hexW, height: lh).fill()
           NSRect(x: asciiX, y: y, width: cw, height: lh).fill()
         }
 
@@ -260,35 +308,49 @@ class HexViewNative: RCTView {
 
   // MARK: - Mouse handling
 
-  override func mouseDown(with event: NSEvent) {
+  func handleMouseDown(with event: NSEvent) {
     let loc = canvas.convert(event.locationInWindow, from: nil)
-    window?.makeFirstResponder(self)
+    window?.makeFirstResponder(canvas)
 
     if let byteInfo = hitTestByte(point: loc) {
       dragAnchor = byteInfo.index
+      isDragging = true
 
       if event.modifierFlags.contains(.shift) {
-        // Extend selection
-        let newStart = min(dragAnchor, cursorPosition)
-        let newEnd = max(dragAnchor, cursorPosition)
-        onSelectionChange?(["start": newStart, "end": newEnd, "cursor": byteInfo.index])
+        dragSelStart = min(byteInfo.index, cursorPosition)
+        dragSelEnd = max(byteInfo.index, cursorPosition)
+        canvas.needsDisplay = true
+        onSelectionChange?(["start": dragSelStart, "end": dragSelEnd, "cursor": byteInfo.index])
       } else {
+        dragSelStart = byteInfo.index
+        dragSelEnd = byteInfo.index
+        canvas.needsDisplay = true
         onBytePress?(["index": byteInfo.index, "isAscii": byteInfo.isAscii])
       }
     }
   }
 
-  override func mouseDragged(with event: NSEvent) {
+  func handleMouseDragged(with event: NSEvent) {
     guard dragAnchor >= 0 else { return }
     let loc = canvas.convert(event.locationInWindow, from: nil)
     if let byteInfo = hitTestByte(point: loc) {
-      let start = min(dragAnchor, byteInfo.index)
-      let end = max(dragAnchor, byteInfo.index)
-      onSelectionChange?(["start": start, "end": end, "cursor": byteInfo.index])
+      dragSelStart = min(dragAnchor, byteInfo.index)
+      dragSelEnd = max(dragAnchor, byteInfo.index)
+      canvas.needsDisplay = true
+      onSelectionChange?(["start": dragSelStart, "end": dragSelEnd, "cursor": byteInfo.index])
     }
   }
 
-  override func mouseUp(with event: NSEvent) {
+  func handleMouseUp(with event: NSEvent) {
+    if dragAnchor >= 0 {
+      let loc = canvas.convert(event.locationInWindow, from: nil)
+      if let byteInfo = hitTestByte(point: loc) {
+        dragSelStart = min(dragAnchor, byteInfo.index)
+        dragSelEnd = max(dragAnchor, byteInfo.index)
+        onSelectionChange?(["start": dragSelStart, "end": dragSelEnd, "cursor": byteInfo.index])
+      }
+    }
+    isDragging = false
     dragAnchor = -1
   }
 
@@ -320,7 +382,7 @@ class HexViewNative: RCTView {
 
   // MARK: - Scroll handling
 
-  override func scrollWheel(with event: NSEvent) {
+  func handleScrollWheel(with event: NSEvent) {
     let delta = event.scrollingDeltaY
     let lineDelta = delta > 0 ? -3 : (delta < 0 ? 3 : 0)
     let newOffset = max(0, scrollOffset + lineDelta * bytesPerLine)
@@ -331,9 +393,7 @@ class HexViewNative: RCTView {
 
   // MARK: - Keyboard handling
 
-  override var acceptsFirstResponder: Bool { true }
-
-  override func keyDown(with event: NSEvent) {
+  func handleKeyDown(with event: NSEvent) {
     let key: String
     switch event.keyCode {
     case 123: key = "ArrowLeft"
@@ -357,7 +417,7 @@ class HexViewNative: RCTView {
     let meta = event.modifierFlags.contains(.command)
 
     if meta {
-      super.keyDown(with: event)
+      // Let Cmd+ shortcuts bubble up to menu bar
       return
     }
 
