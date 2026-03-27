@@ -71,6 +71,15 @@ export function HexView() {
     [setCursorPosition, setSelection, setIsEditing, setEditNibble],
   );
 
+  const onSelectionChange = useCallback(
+    (e: any) => {
+      const {start, end, cursor} = e.nativeEvent;
+      setCursorPosition(cursor);
+      setSelection(start, end);
+    },
+    [setCursorPosition, setSelection],
+  );
+
   const onScroll = useCallback(
     (e: any) => {
       const {offset} = e.nativeEvent;
@@ -186,6 +195,7 @@ export function HexView() {
       editNibble={editNibble}
       focused={true}
       onBytePress={onBytePress}
+      onSelectionChange={onSelectionChange}
       onScroll={onScroll}
       onHexKeyDown={onHexKeyDown}
     />

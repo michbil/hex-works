@@ -35,8 +35,12 @@ class HexViewNative: RCTView {
   @objc var focused: Bool = true { didSet { canvas.needsDisplay = true } }
 
   @objc var onBytePress: RCTDirectEventBlock?
+  @objc var onSelectionChange: RCTDirectEventBlock?
   @objc var onScroll: RCTDirectEventBlock?
   @objc var onHexKeyDown: RCTDirectEventBlock?
+
+  // Drag selection anchor
+  private var dragAnchor: Int = -1
 
   // MARK: - Decoded data
 
@@ -226,6 +230,24 @@ class HexViewNative: RCTView {
         drawText(ch, x: asciiX, y: y, color: textCol)
       }
     }
+
+    // Scrollbar
+    if totalLines > visibleRows {
+      let scrollbarWidth: CGFloat = 10
+      let scrollbarX = width - scrollbarWidth
+
+      // Track
+      NSColor(white: 0.94, alpha: 1).setFill()
+      NSRect(x: scrollbarX, y: 0, width: scrollbarWidth, height: height).fill()
+
+      // Grip
+      let gripHeight = max(30, height * CGFloat(visibleRows) / CGFloat(totalLines))
+      let maxScrollOffset = max(1, (totalLines - visibleRows) * bytesPerLine)
+      let gripTop = (height - gripHeight) * CGFloat(scrollOffset) / CGFloat(maxScrollOffset)
+
+      NSColor(white: 0.67, alpha: 1).setFill()
+      NSRect(x: scrollbarX, y: gripTop, width: scrollbarWidth, height: gripHeight).fill()
+    }
   }
 
   private func drawText(_ text: String, x: CGFloat, y: CGFloat, color: NSColor) {
@@ -240,10 +262,34 @@ class HexViewNative: RCTView {
 
   override func mouseDown(with event: NSEvent) {
     let loc = canvas.convert(event.locationInWindow, from: nil)
-    if let byteInfo = hitTestByte(point: loc) {
-      onBytePress?(["index": byteInfo.index, "isAscii": byteInfo.isAscii])
-    }
     window?.makeFirstResponder(self)
+
+    if let byteInfo = hitTestByte(point: loc) {
+      dragAnchor = byteInfo.index
+
+      if event.modifierFlags.contains(.shift) {
+        // Extend selection
+        let newStart = min(dragAnchor, cursorPosition)
+        let newEnd = max(dragAnchor, cursorPosition)
+        onSelectionChange?(["start": newStart, "end": newEnd, "cursor": byteInfo.index])
+      } else {
+        onBytePress?(["index": byteInfo.index, "isAscii": byteInfo.isAscii])
+      }
+    }
+  }
+
+  override func mouseDragged(with event: NSEvent) {
+    guard dragAnchor >= 0 else { return }
+    let loc = canvas.convert(event.locationInWindow, from: nil)
+    if let byteInfo = hitTestByte(point: loc) {
+      let start = min(dragAnchor, byteInfo.index)
+      let end = max(dragAnchor, byteInfo.index)
+      onSelectionChange?(["start": start, "end": end, "cursor": byteInfo.index])
+    }
+  }
+
+  override func mouseUp(with event: NSEvent) {
+    dragAnchor = -1
   }
 
   private func hitTestByte(point: NSPoint) -> (index: Int, isAscii: Bool)? {
