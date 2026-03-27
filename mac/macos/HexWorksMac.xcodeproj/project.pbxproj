@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2B8AF182A6BFAE0F98B6F693 /* HexViewNative.swift in Sources */ = {isa = PBXBuildFile; fileRef = E31BBA5A4874F3E7401035E7 /* HexViewNative.swift */; };
 		2FD4A979650ACF2A906E1926 /* FileDialogModule.m in Sources */ = {isa = PBXBuildFile; fileRef = C7616A35C1C2D975902499ED /* FileDialogModule.m */; };
 		3CF8B5D2C39F5C1A48188002 /* libPods-HexWorksMac-macOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 66B1052D7E7E1F054C33A55F /* libPods-HexWorksMac-macOS.a */; };
 		5142014D2437B4B30078DB4F /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5142014C2437B4B30078DB4F /* AppDelegate.mm */; };
@@ -14,12 +15,16 @@
 		514201552437B4B40078DB4F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 514201532437B4B40078DB4F /* Main.storyboard */; };
 		514201582437B4B40078DB4F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 514201572437B4B40078DB4F /* main.m */; };
 		93EA6FE35CDF9FC8CE4ED444 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8FD396669A94E4CB638D5713 /* PrivacyInfo.xcprivacy */; };
+		95C8866C8C363F4A23ED2E51 /* HexViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */; };
+		B2057D3E05712F229F28B85F /* HexViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA8F30E8324BE804D394321 /* HexViewManager.swift */; };
 		EAC9C37769E76D1645EE3328 /* MenuBarModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 55AD1D050BA2D0A0D9AAB689 /* MenuBarModule.m */; };
 		ED8F153F15EE3AF741B58F06 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8FD396669A94E4CB638D5713 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0EA8F30E8324BE804D394321 /* HexViewManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HexViewManager.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* HexWorksMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HexWorksMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2470201DB57D5FA5F96EFFD4 /* HexWorksMac-macOS-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "HexWorksMac-macOS-Bridging-Header.h"; sourceTree = "<group>"; };
 		350B14A2173BC955AE84DA26 /* Pods-HexWorksMac-macOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HexWorksMac-macOS.release.xcconfig"; path = "Target Support Files/Pods-HexWorksMac-macOS/Pods-HexWorksMac-macOS.release.xcconfig"; sourceTree = "<group>"; };
 		514201492437B4B30078DB4F /* HexWorksMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HexWorksMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5142014B2437B4B30078DB4F /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -36,6 +41,8 @@
 		9F2F209EC77D48878ECDBCF2 /* FileDialogModule.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = FileDialogModule.h; sourceTree = "<group>"; };
 		C7616A35C1C2D975902499ED /* FileDialogModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = FileDialogModule.m; sourceTree = "<group>"; };
 		D65428479A83565F1D4C4C12 /* Pods-HexWorksMac-macOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HexWorksMac-macOS.debug.xcconfig"; path = "Target Support Files/Pods-HexWorksMac-macOS/Pods-HexWorksMac-macOS.debug.xcconfig"; sourceTree = "<group>"; };
+		E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = HexViewManager.m; sourceTree = "<group>"; };
+		E31BBA5A4874F3E7401035E7 /* HexViewNative.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HexViewNative.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -91,6 +98,10 @@
 				C7616A35C1C2D975902499ED /* FileDialogModule.m */,
 				58A2DD3DE9E9C90987D516A2 /* MenuBarModule.h */,
 				55AD1D050BA2D0A0D9AAB689 /* MenuBarModule.m */,
+				2470201DB57D5FA5F96EFFD4 /* HexWorksMac-macOS-Bridging-Header.h */,
+				E31BBA5A4874F3E7401035E7 /* HexViewNative.swift */,
+				0EA8F30E8324BE804D394321 /* HexViewManager.swift */,
+				E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */,
 			);
 			path = "HexWorksMac-macOS";
 			sourceTree = "<group>";
@@ -342,6 +353,9 @@
 				5142014D2437B4B30078DB4F /* AppDelegate.mm in Sources */,
 				2FD4A979650ACF2A906E1926 /* FileDialogModule.m in Sources */,
 				EAC9C37769E76D1645EE3328 /* MenuBarModule.m in Sources */,
+				2B8AF182A6BFAE0F98B6F693 /* HexViewNative.swift in Sources */,
+				B2057D3E05712F229F28B85F /* HexViewManager.swift in Sources */,
+				95C8866C8C363F4A23ED2E51 /* HexViewManager.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -420,6 +434,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = HexWorksMac;
 				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "HexWorksMac-macOS/HexWorksMac-macOS-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -443,6 +458,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = HexWorksMac;
 				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "HexWorksMac-macOS/HexWorksMac-macOS-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
