@@ -116,6 +116,89 @@ RCT_EXPORT_METHOD(setWindowTitle:(NSString *)title)
   });
 }
 
+RCT_EXPORT_METHOD(showContextMenu:(NSArray *)items
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
+    menu.autoenablesItems = NO;
+
+    __block NSString *selectedAction = nil;
+
+    for (NSUInteger i = 0; i < items.count; i++) {
+      NSDictionary *item = items[i];
+      NSString *label = item[@"label"];
+      NSString *action = item[@"action"];
+      if ([label isEqualToString:@"---"]) {
+        [menu addItem:[NSMenuItem separatorItem]];
+      } else {
+        NSMenuItem *menuItem = [[NSMenuItem alloc] initWithTitle:label action:@selector(contextMenuItemClicked:) keyEquivalent:@""];
+        menuItem.target = self;
+        menuItem.tag = i;
+        menuItem.representedObject = action;
+        menuItem.enabled = YES;
+        [menu addItem:menuItem];
+      }
+    }
+
+    NSWindow *window = NSApp.mainWindow;
+    if (window) {
+      NSPoint mouseLoc = [NSEvent mouseLocation];
+      NSPoint windowPoint = [window convertPointFromScreen:mouseLoc];
+      NSView *contentView = window.contentView;
+      NSPoint viewPoint = [contentView convertPoint:windowPoint fromView:nil];
+
+      // Store resolve block for callback
+      self.contextMenuResolve = resolve;
+      self.contextMenuResolved = NO;
+
+      [menu popUpMenuPositioningItem:nil atLocation:viewPoint inView:contentView];
+
+      // If nothing was selected (menu dismissed)
+      if (!self.contextMenuResolved) {
+        resolve([NSNull null]);
+      }
+      self.contextMenuResolve = nil;
+    } else {
+      resolve([NSNull null]);
+    }
+  });
+}
+
+- (void)contextMenuItemClicked:(NSMenuItem *)sender {
+  if (self.contextMenuResolve && sender.representedObject) {
+    self.contextMenuResolve(sender.representedObject);
+    self.contextMenuResolved = YES;
+  }
+}
+
+RCT_EXPORT_METHOD(showInputAlert:(NSString *)title
+                  message:(NSString *)message
+                  defaultValue:(NSString *)defaultValue
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = title;
+    alert.informativeText = message;
+    [alert addButtonWithTitle:@"OK"];
+    [alert addButtonWithTitle:@"Cancel"];
+
+    NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
+    input.stringValue = defaultValue ?: @"";
+    alert.accessoryView = input;
+
+    NSModalResponse response = [alert runModal];
+    if (response == NSAlertFirstButtonReturn) {
+      resolve(input.stringValue);
+    } else {
+      resolve([NSNull null]);
+    }
+  });
+}
+
 RCT_EXPORT_METHOD(copyToClipboard:(NSString *)text)
 {
   dispatch_async(dispatch_get_main_queue(), ^{

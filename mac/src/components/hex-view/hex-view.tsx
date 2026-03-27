@@ -1,7 +1,10 @@
 import React, {useCallback, useMemo} from 'react';
-import {requireNativeComponent, StyleSheet} from 'react-native';
+import {requireNativeComponent, StyleSheet, NativeModules} from 'react-native';
 import {useHexEditorStore} from '@shared/contexts/hex-editor-store';
 import {isHexDigit, keyToHexValue} from '@shared/utils/keys';
+import {stringToByteSeq} from '@shared/utils/helpers';
+
+const {FileDialogModule} = NativeModules;
 
 const NativeHexView = requireNativeComponent('HexView');
 
@@ -178,6 +181,68 @@ export function HexView() {
     ],
   );
 
+  const clearMarkers = useHexEditorStore(s => s.clearMarkers);
+  const swapBytes = useHexEditorStore(s => s.swapBytes);
+  const fillSelection = useHexEditorStore(s => s.fillSelection);
+
+  const onContextMenuAction = useCallback(
+    (e: any) => {
+      const {action, pattern} = e.nativeEvent;
+      const state = useHexEditorStore.getState();
+      const buf = state.buffer;
+      if (!buf) return;
+
+      switch (action) {
+        case 'copy': {
+          const sel = state.selection;
+          const start = Math.min(sel.start, sel.end);
+          const end = Math.max(sel.start, sel.end);
+          const length = start === end ? 1 : end - start + 1;
+          const offset = start === end ? state.cursorPosition : start;
+          const hex = buf.toHexString(offset, length);
+          FileDialogModule.copyToClipboard(hex);
+          break;
+        }
+        case 'paste':
+          FileDialogModule.pasteFromClipboard().then((text: string) => {
+            if (!text) return;
+            const s = useHexEditorStore.getState();
+            if (!s.buffer) return;
+            const cleaned = text.replace(/[\s,]/g, '');
+            if (/^[0-9a-fA-F]*$/.test(cleaned) && cleaned.length % 2 === 0) {
+              s.buffer.pasteSequence(cleaned, s.cursorPosition);
+              useHexEditorStore.setState(st => ({
+                isModified: true,
+                renderKey: st.renderKey + 1,
+              }));
+            }
+          });
+          break;
+        case 'selectAll':
+          setSelection(0, buf.length - 1);
+          useHexEditorStore.setState(s => ({renderKey: s.renderKey + 1}));
+          break;
+        case 'clearMarkers':
+          clearMarkers();
+          break;
+        case 'swapBytes':
+          swapBytes();
+          break;
+        case 'fill':
+        case 'xor': {
+          if (pattern) {
+            const seq = stringToByteSeq(pattern);
+            if (seq.length > 0) {
+              fillSelection(seq, action === 'xor');
+            }
+          }
+          break;
+        }
+      }
+    },
+    [setSelection, clearMarkers, swapBytes, fillSelection],
+  );
+
   if (!buffer) return null;
 
   return (
@@ -200,6 +265,7 @@ export function HexView() {
       onSelectionChange={onSelectionChange}
       onScroll={onScroll}
       onHexKeyDown={onHexKeyDown}
+      onContextMenuAction={onContextMenuAction}
     />
   );
 }

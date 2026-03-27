@@ -10,12 +10,14 @@
 		2B8AF182A6BFAE0F98B6F693 /* HexViewNative.swift in Sources */ = {isa = PBXBuildFile; fileRef = E31BBA5A4874F3E7401035E7 /* HexViewNative.swift */; };
 		2FD4A979650ACF2A906E1926 /* FileDialogModule.m in Sources */ = {isa = PBXBuildFile; fileRef = C7616A35C1C2D975902499ED /* FileDialogModule.m */; };
 		3CF8B5D2C39F5C1A48188002 /* libPods-HexWorksMac-macOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 66B1052D7E7E1F054C33A55F /* libPods-HexWorksMac-macOS.a */; };
+		456574786F4258FFA6DEAD7D /* RightClickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B380ABE2705E2749CC1C9279 /* RightClickView.swift */; };
 		5142014D2437B4B30078DB4F /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5142014C2437B4B30078DB4F /* AppDelegate.mm */; };
 		514201522437B4B40078DB4F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 514201512437B4B40078DB4F /* Assets.xcassets */; };
 		514201552437B4B40078DB4F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 514201532437B4B40078DB4F /* Main.storyboard */; };
 		514201582437B4B40078DB4F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 514201572437B4B40078DB4F /* main.m */; };
 		93EA6FE35CDF9FC8CE4ED444 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8FD396669A94E4CB638D5713 /* PrivacyInfo.xcprivacy */; };
 		95C8866C8C363F4A23ED2E51 /* HexViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */; };
+		9CF9E10C1770F0DB004C5121 /* RightClickViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E6B899ACD1AC5ADEA2AC88A8 /* RightClickViewManager.m */; };
 		B2057D3E05712F229F28B85F /* HexViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA8F30E8324BE804D394321 /* HexViewManager.swift */; };
 		EAC9C37769E76D1645EE3328 /* MenuBarModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 55AD1D050BA2D0A0D9AAB689 /* MenuBarModule.m */; };
 		ED8F153F15EE3AF741B58F06 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8FD396669A94E4CB638D5713 /* PrivacyInfo.xcprivacy */; };
@@ -39,10 +41,12 @@
 		66B1052D7E7E1F054C33A55F /* libPods-HexWorksMac-macOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-HexWorksMac-macOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FD396669A94E4CB638D5713 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9F2F209EC77D48878ECDBCF2 /* FileDialogModule.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = FileDialogModule.h; sourceTree = "<group>"; };
+		B380ABE2705E2749CC1C9279 /* RightClickView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RightClickView.swift; sourceTree = "<group>"; };
 		C7616A35C1C2D975902499ED /* FileDialogModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = FileDialogModule.m; sourceTree = "<group>"; };
 		D65428479A83565F1D4C4C12 /* Pods-HexWorksMac-macOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HexWorksMac-macOS.debug.xcconfig"; path = "Target Support Files/Pods-HexWorksMac-macOS/Pods-HexWorksMac-macOS.debug.xcconfig"; sourceTree = "<group>"; };
 		E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = HexViewManager.m; sourceTree = "<group>"; };
 		E31BBA5A4874F3E7401035E7 /* HexViewNative.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HexViewNative.swift; sourceTree = "<group>"; };
+		E6B899ACD1AC5ADEA2AC88A8 /* RightClickViewManager.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = RightClickViewManager.m; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -102,6 +106,8 @@
 				E31BBA5A4874F3E7401035E7 /* HexViewNative.swift */,
 				0EA8F30E8324BE804D394321 /* HexViewManager.swift */,
 				E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */,
+				B380ABE2705E2749CC1C9279 /* RightClickView.swift */,
+				E6B899ACD1AC5ADEA2AC88A8 /* RightClickViewManager.m */,
 			);
 			path = "HexWorksMac-macOS";
 			sourceTree = "<group>";
@@ -356,6 +362,8 @@
 				2B8AF182A6BFAE0F98B6F693 /* HexViewNative.swift in Sources */,
 				B2057D3E05712F229F28B85F /* HexViewManager.swift in Sources */,
 				95C8866C8C363F4A23ED2E51 /* HexViewManager.m in Sources */,
+				456574786F4258FFA6DEAD7D /* RightClickView.swift in Sources */,
+				9CF9E10C1770F0DB004C5121 /* RightClickViewManager.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

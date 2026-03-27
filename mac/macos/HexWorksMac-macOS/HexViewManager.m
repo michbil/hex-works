@@ -19,5 +19,6 @@ RCT_EXPORT_VIEW_PROPERTY(onBytePress, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onSelectionChange, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onScroll, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onHexKeyDown, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onContextMenuAction, RCTDirectEventBlock)
 
 @end

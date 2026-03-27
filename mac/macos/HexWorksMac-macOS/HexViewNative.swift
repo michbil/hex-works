@@ -38,6 +38,10 @@ private class HexCanvasView: NSView {
   override func scrollWheel(with event: NSEvent) {
     hexView?.handleScrollWheel(with: event)
   }
+
+  override func rightMouseDown(with event: NSEvent) {
+    hexView?.handleRightClick(with: event)
+  }
 }
 
 // MARK: - React Native wrapper
@@ -65,6 +69,7 @@ class HexViewNative: RCTView {
   @objc var onScroll: RCTDirectEventBlock?
   @objc var onHexKeyDown: RCTDirectEventBlock?
   @objc var onByteEdit: RCTDirectEventBlock?
+  @objc var onContextMenuAction: RCTDirectEventBlock?
 
   // Drag selection state (local, for immediate visual feedback)
   private var dragAnchor: Int = -1
@@ -389,6 +394,81 @@ class HexViewNative: RCTView {
     let maxOffset = max(0, (totalLines - visibleRows) * bytesPerLine)
     let clampedOffset = min(newOffset, maxOffset)
     onScroll?(["offset": clampedOffset])
+  }
+
+  // MARK: - Context menu (right-click)
+
+  func handleRightClick(with event: NSEvent) {
+    let menu = NSMenu(title: "Hex Editor")
+
+    let copyItem = NSMenuItem(title: "Copy", action: #selector(ctxCopy), keyEquivalent: "")
+    copyItem.target = self
+    menu.addItem(copyItem)
+
+    let pasteItem = NSMenuItem(title: "Paste", action: #selector(ctxPaste), keyEquivalent: "")
+    pasteItem.target = self
+    menu.addItem(pasteItem)
+
+    let selectAllItem = NSMenuItem(title: "Select All", action: #selector(ctxSelectAll), keyEquivalent: "")
+    selectAllItem.target = self
+    menu.addItem(selectAllItem)
+
+    menu.addItem(NSMenuItem.separator())
+
+    let clearItem = NSMenuItem(title: "Clear Markers", action: #selector(ctxClearMarkers), keyEquivalent: "")
+    clearItem.target = self
+    menu.addItem(clearItem)
+
+    let swapItem = NSMenuItem(title: "Swap Bytes", action: #selector(ctxSwapBytes), keyEquivalent: "")
+    swapItem.target = self
+    menu.addItem(swapItem)
+
+    menu.addItem(NSMenuItem.separator())
+
+    let fillItem = NSMenuItem(title: "Fill...", action: #selector(ctxFill), keyEquivalent: "")
+    fillItem.target = self
+    menu.addItem(fillItem)
+
+    let xorItem = NSMenuItem(title: "XOR...", action: #selector(ctxXor), keyEquivalent: "")
+    xorItem.target = self
+    menu.addItem(xorItem)
+
+    NSMenu.popUpContextMenu(menu, with: event, for: canvas)
+  }
+
+  @objc private func ctxCopy() { onContextMenuAction?(["action": "copy"]) }
+  @objc private func ctxPaste() { onContextMenuAction?(["action": "paste"]) }
+  @objc private func ctxSelectAll() { onContextMenuAction?(["action": "selectAll"]) }
+  @objc private func ctxClearMarkers() { onContextMenuAction?(["action": "clearMarkers"]) }
+  @objc private func ctxSwapBytes() { onContextMenuAction?(["action": "swapBytes"]) }
+
+  @objc private func ctxFill() {
+    showHexPatternAlert(title: "Fill", action: "fill")
+  }
+
+  @objc private func ctxXor() {
+    showHexPatternAlert(title: "XOR", action: "xor")
+  }
+
+  private func showHexPatternAlert(title: String, action: String) {
+    let alert = NSAlert()
+    alert.messageText = "\(title) with hex pattern"
+    alert.informativeText = "Enter hex bytes (e.g. FF 00 AB):"
+    alert.addButton(withTitle: "OK")
+    alert.addButton(withTitle: "Cancel")
+
+    let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+    input.placeholderString = "FF 00"
+    input.font = NSFont(name: "Menlo", size: 13)
+    alert.accessoryView = input
+
+    let response = alert.runModal()
+    if response == .alertFirstButtonReturn {
+      let pattern = input.stringValue
+      if !pattern.isEmpty {
+        onContextMenuAction?(["action": action, "pattern": pattern])
+      }
+    }
   }
 
   // MARK: - Keyboard handling
