@@ -33,6 +33,8 @@ export function HexView() {
   const setEditNibble = useHexEditorStore(s => s.setEditNibble);
   const setByte = useHexEditorStore(s => s.setByte);
   const getColorBuffer = useHexEditorStore(s => s.getColorBuffer);
+  const heatmapChangeCounts = useHexEditorStore(s => s.heatmapChangeCounts);
+  const heatmapMaxChanges = useHexEditorStore(s => s.heatmapMaxChanges);
 
   // Encode buffer data as base64 for native view
   const bufferBase64 = useMemo(() => {
@@ -62,6 +64,13 @@ export function HexView() {
     return uint8ArrayToBase64(marked);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buffer, renderKey]);
+
+  const heatmapBase64 = useMemo(() => {
+    if (!heatmapChangeCounts || heatmapMaxChanges === 0) return '';
+    // Uint16Array → raw bytes (little-endian) → base64
+    const bytes = new Uint8Array(heatmapChangeCounts.buffer);
+    return uint8ArrayToBase64(bytes);
+  }, [heatmapChangeCounts, heatmapMaxChanges]);
 
   const onBytePress = useCallback(
     (e: any) => {
@@ -261,6 +270,8 @@ export function HexView() {
       isEditing={isEditing}
       editNibble={editNibble}
       focused={true}
+      heatmapBase64={heatmapBase64}
+      heatmapMaxChanges={heatmapMaxChanges}
       onBytePress={onBytePress}
       onSelectionChange={onSelectionChange}
       onScroll={onScroll}

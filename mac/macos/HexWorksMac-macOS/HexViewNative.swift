@@ -1,4 +1,5 @@
 import AppKit
+import CoreImage
 import CoreText
 
 // MARK: - Drawing canvas (non-layer-backed, so draw() works)
@@ -63,6 +64,8 @@ class HexViewNative: RCTView {
   @objc var isEditing: Bool = false { didSet { canvas.needsDisplay = true } }
   @objc var editNibble: String = "high" { didSet { canvas.needsDisplay = true } }
   @objc var focused: Bool = true { didSet { canvas.needsDisplay = true } }
+  @objc var heatmapBase64: String = "" { didSet { decodeHeatmap(); canvas.needsDisplay = true } }
+  @objc var heatmapMaxChanges: Int = 0 { didSet { canvas.needsDisplay = true } }
 
   @objc var onBytePress: RCTDirectEventBlock?
   @objc var onSelectionChange: RCTDirectEventBlock?
@@ -82,6 +85,7 @@ class HexViewNative: RCTView {
   private var bufferData: Data = Data()
   private var colorData: Data = Data()
   private var markedData: Data = Data()
+  private var heatmapData: [UInt16] = []
 
   // MARK: - Canvas subview
 
@@ -139,6 +143,21 @@ class HexViewNative: RCTView {
 
   private static let hexChars: [String] = (0..<256).map { String(format: "%02X", $0) }
 
+  /// Heatmap color: 0 → transparent, max → red (semi-transparent overlay)
+  private static func heatColor(_ changeCount: Int, max maxChanges: Int) -> NSColor {
+    let t = Double(changeCount) / Double(maxChanges)
+    if t <= 0.5 {
+      let s = t * 2
+      let r = 30 + s * 225
+      let g = 30 + s * 195
+      let b = 80 * (1 - s)
+      return NSColor(red: r/255, green: g/255, blue: b/255, alpha: 0.45)
+    }
+    let s = (t - 0.5) * 2
+    let g = 225 * (1 - s)
+    return NSColor(red: 1.0, green: g/255, blue: 0, alpha: 0.45)
+  }
+
   // MARK: - Init
 
   override init(frame: NSRect) {
@@ -190,6 +209,19 @@ class HexViewNative: RCTView {
     }
   }
 
+  private func decodeHeatmap() {
+    // Heatmap is a Uint16Array encoded as base64 (little-endian)
+    guard let data = Data(base64Encoded: heatmapBase64), data.count >= 2 else {
+      heatmapData = []
+      return
+    }
+    let count = data.count / 2
+    heatmapData = data.withUnsafeBytes { raw in
+      let ptr = raw.bindMemory(to: UInt16.self)
+      return Array(ptr.prefix(count))
+    }
+  }
+
   // MARK: - Drawing (called from HexCanvasView.draw)
 
   func drawContent(in rect: NSRect) {
@@ -217,7 +249,58 @@ class HexViewNative: RCTView {
     let cw = charWidth
     let lh = lineHeight
     let addrW = addressWidth
+    let hasHeatmap = !heatmapData.isEmpty && heatmapMaxChanges > 0
 
+    // Pass 0: Heatmap background with blur (drawn before everything else)
+    if hasHeatmap, let offscreen = CGContext(
+      data: nil, width: Int(width), height: Int(height),
+      bitsPerComponent: 8, bytesPerRow: Int(width) * 4,
+      space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) {
+      let iw = Int(width)
+      let ih = Int(height)
+
+      // Flip to match our isFlipped coordinate system
+      offscreen.translateBy(x: 0, y: CGFloat(ih))
+      offscreen.scaleBy(x: 1, y: -1)
+
+      for row in 0..<visibleRows {
+        let lineIndex = startLine + row
+        if lineIndex >= totalLines { break }
+        let lineOffset = lineIndex * bytesPerLine
+        let y = CGFloat(row) * lh
+        let count = min(bytesPerLine, bufferData.count - lineOffset)
+
+        for col in 0..<count {
+          let byteIndex = lineOffset + col
+          guard byteIndex < heatmapData.count else { break }
+          let cc = Int(heatmapData[byteIndex])
+          if cc > 0 {
+            let hexX = addrW + CGFloat(col) * cw * hexCharWidth
+            let asciiX = asciiStartX + CGFloat(col) * cw
+            let color = Self.heatColor(cc, max: heatmapMaxChanges)
+            offscreen.setFillColor(color.cgColor)
+            offscreen.fill(CGRect(x: hexX, y: y, width: cw * hexCharWidth, height: lh))
+            offscreen.fill(CGRect(x: asciiX, y: y, width: cw, height: lh))
+          }
+        }
+      }
+
+      // Blur via CoreImage and composite onto main context
+      if let cgImage = offscreen.makeImage() {
+        let ciImage = CIImage(cgImage: cgImage)
+        let blurred = ciImage.applyingGaussianBlur(sigma: 8)
+        let ciCtx = CIContext()
+        if let blurredCG = ciCtx.createCGImage(blurred, from: ciImage.extent) {
+          // Use NSImage to draw, which respects the flipped coordinate system
+          let nsImage = NSImage(cgImage: blurredCG, size: NSSize(width: width, height: height))
+          nsImage.draw(in: NSRect(x: 0, y: 0, width: width, height: height))
+        }
+      }
+    }
+
+    // Pass 1: Content
     for row in 0..<visibleRows {
       let lineIndex = startLine + row
       if lineIndex >= totalLines { break }

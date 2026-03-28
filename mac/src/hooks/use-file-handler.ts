@@ -38,16 +38,21 @@ export function useFileHandler() {
       const result = await FileDialogModule.openFile();
       if (!result) return; // User cancelled
 
-      const bytes = base64ToUint8Array(result.data);
-      const buf = new BinaryBuffer(bytes);
-      buf.name = result.name;
-      addTab(buf, result.name);
+      // Result is now an array of files
+      const files = Array.isArray(result) ? result : [result];
 
-      // Store the file path for subsequent saves
-      filePathsRef.current.set(buf.uuid, result.path);
+      for (const file of files) {
+        const bytes = base64ToUint8Array(file.data);
+        const buf = new BinaryBuffer(bytes);
+        buf.name = file.name;
+        addTab(buf, file.name);
+        filePathsRef.current.set(buf.uuid, file.path);
+      }
 
-      // Update window title
-      FileDialogModule.setWindowTitle(`${result.name} - Hex Works`);
+      const lastName = files[files.length - 1]?.name;
+      if (lastName) {
+        FileDialogModule.setWindowTitle(`${lastName} - Hex Works`);
+      }
     } catch (err) {
       console.error('Failed to open file:', err);
     }

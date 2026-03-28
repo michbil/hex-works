@@ -17,32 +17,35 @@ RCT_EXPORT_METHOD(openFile:(RCTPromiseResolveBlock)resolve
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.canChooseFiles = YES;
     panel.canChooseDirectories = NO;
-    panel.allowsMultipleSelection = NO;
-    panel.message = @"Select a binary file to open";
+    panel.allowsMultipleSelection = YES;
+    panel.message = @"Select binary files to open";
 
     [panel beginWithCompletionHandler:^(NSModalResponse result) {
-      if (result != NSModalResponseOK || panel.URL == nil) {
+      if (result != NSModalResponseOK || panel.URLs.count == 0) {
         resolve([NSNull null]);
         return;
       }
 
-      NSError *error = nil;
-      NSData *data = [NSData dataWithContentsOfURL:panel.URL options:0 error:&error];
-      if (error) {
-        reject(@"READ_ERROR", error.localizedDescription, error);
+      NSMutableArray *files = [NSMutableArray new];
+      for (NSURL *url in panel.URLs) {
+        NSError *error = nil;
+        NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
+        if (error) continue;
+
+        [files addObject:@{
+          @"name": url.lastPathComponent ?: @"",
+          @"path": url.path ?: @"",
+          @"data": [data base64EncodedStringWithOptions:0] ?: @"",
+          @"size": @(data.length),
+        }];
+      }
+
+      if (files.count == 0) {
+        reject(@"READ_ERROR", @"Failed to read selected files", nil);
         return;
       }
 
-      NSString *base64 = [data base64EncodedStringWithOptions:0];
-      NSString *name = panel.URL.lastPathComponent;
-      NSString *path = panel.URL.path;
-
-      resolve(@{
-        @"name": name ?: @"",
-        @"path": path ?: @"",
-        @"data": base64 ?: @"",
-        @"size": @(data.length),
-      });
+      resolve(files);
     }];
   });
 }

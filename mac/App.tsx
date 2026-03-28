@@ -1,21 +1,23 @@
-import React, {useState, useCallback} from 'react';
-import {View, Text, Pressable, StyleSheet, NativeModules} from 'react-native';
-import {I18nextProvider, useTranslation} from '@shared/locales';
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, NativeModules } from 'react-native';
+import { I18nextProvider, useTranslation } from '@shared/locales';
 import i18n from '@shared/locales';
-import {useHexEditorStore} from '@shared/contexts/hex-editor-store';
-import {Inspector} from '@shared/components/inspector/inspector';
-import {HexView} from './src/components/hex-view';
-import {TabBar} from './src/components/layout/tab-bar';
-import {ColorPicker} from './src/components/color-picker';
-import {useMenuBar} from './src/hooks/use-menu-bar';
-import {useFileHandler} from './src/hooks/use-file-handler';
+import { useHexEditorStore } from '@shared/contexts/hex-editor-store';
+import { Inspector } from '@shared/components/inspector/inspector';
+import { SearchPanel } from '@shared/components/search-panel/search-panel';
+import { HexView } from './src/components/hex-view';
+import { TabBar } from './src/components/layout/tab-bar';
+import { ColorPicker } from './src/components/color-picker';
+import { HeatmapPanel } from './src/components/heatmap-panel';
+import { useMenuBar } from './src/hooks/use-menu-bar';
+import { useFileHandler } from './src/hooks/use-file-handler';
 
-const {FileDialogModule} = NativeModules;
+const { FileDialogModule } = NativeModules;
 
-type PanelTab = 'inspector' | 'search';
+type PanelTab = 'inspector' | 'search' | 'heatmap';
 
 function StatusBar() {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const buffer = useHexEditorStore(s => s.buffer);
   const cursorPosition = useHexEditorStore(s => s.cursorPosition);
   const bytesPerLine = useHexEditorStore(s => s.bytesPerLine);
@@ -33,7 +35,8 @@ function StatusBar() {
   return (
     <View style={styles.statusBar}>
       <Text style={styles.statusText}>
-        {t('offset')}: 0x{cursorPosition.toString(16).toUpperCase().padStart(8, '0')}
+        {t('offset')}: 0x
+        {cursorPosition.toString(16).toUpperCase().padStart(8, '0')}
       </Text>
       <Text style={styles.statusText}>
         {t('line')}: {line} {t('col')}: {col}
@@ -55,15 +58,18 @@ function StatusBar() {
 }
 
 function EmptyState() {
-  const {t} = useTranslation();
-  const {openFile, createNewFile} = useFileHandler();
+  const { t } = useTranslation();
+  const { openFile, createNewFile } = useFileHandler();
 
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyTitle}>Hex Works</Text>
       <Text style={styles.emptySubtitle}>macOS Edition</Text>
       <View style={styles.emptyActions}>
-        <Pressable style={styles.emptyButton} onPress={() => createNewFile(256)}>
+        <Pressable
+          style={styles.emptyButton}
+          onPress={() => createNewFile(256)}
+        >
           <Text style={styles.emptyButtonText}>{t('new')} (Cmd+N)</Text>
         </Pressable>
         <Pressable style={styles.emptyButton} onPress={openFile}>
@@ -81,7 +87,7 @@ function HexEditorApp() {
   const fileName = useHexEditorStore(s => s.fileName);
 
   // Set up native menu bar
-  useMenuBar({setRightTab});
+  useMenuBar({ setRightTab });
 
   // Update window title when tab changes
   React.useEffect(() => {
@@ -106,19 +112,21 @@ function HexEditorApp() {
         </View>
         <View style={styles.rightPanel}>
           <View style={styles.panelTabBar}>
-            {(['inspector', 'search'] as PanelTab[]).map(tab => (
+            {(['inspector', 'search', 'heatmap'] as PanelTab[]).map(tab => (
               <Pressable
                 key={tab}
                 style={[
                   styles.panelTab,
                   rightTab === tab && styles.panelTabActive,
                 ]}
-                onPress={() => setRightTab(tab)}>
+                onPress={() => setRightTab(tab)}
+              >
                 <Text
                   style={[
                     styles.panelTabText,
                     rightTab === tab && styles.panelTabTextActive,
-                  ]}>
+                  ]}
+                >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </Text>
               </Pressable>
@@ -126,9 +134,8 @@ function HexEditorApp() {
           </View>
           <View style={styles.panelContent}>
             {rightTab === 'inspector' && <Inspector />}
-            {rightTab === 'search' && (
-              <Text style={styles.panelPlaceholder}>Search panel (coming soon)</Text>
-            )}
+            {rightTab === 'search' && <SearchPanel />}
+            {rightTab === 'heatmap' && <HeatmapPanel />}
           </View>
         </View>
       </View>
