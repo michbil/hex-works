@@ -7,3 +7,4 @@
 #import <React/RCTEventEmitter.h>
 #import <React/RCTUIManager.h>
 #import <React/RCTView.h>
+#import "MenuBarModule.h"

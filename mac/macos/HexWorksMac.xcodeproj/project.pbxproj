@@ -15,8 +15,10 @@
 		514201522437B4B40078DB4F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 514201512437B4B40078DB4F /* Assets.xcassets */; };
 		514201552437B4B40078DB4F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 514201532437B4B40078DB4F /* Main.storyboard */; };
 		514201582437B4B40078DB4F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 514201572437B4B40078DB4F /* main.m */; };
+		5BE963B46A7B08A5A757E9C2 /* StorageModule.m in Sources */ = {isa = PBXBuildFile; fileRef = E12A12ACE374CC179E137F62 /* StorageModule.m */; };
 		93EA6FE35CDF9FC8CE4ED444 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8FD396669A94E4CB638D5713 /* PrivacyInfo.xcprivacy */; };
 		95C8866C8C363F4A23ED2E51 /* HexViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */; };
+		9CB4A6EB78CBFF1C0AC0E387 /* ToolbarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B093881B8BE74117C4A0FF8 /* ToolbarManager.swift */; };
 		9CF9E10C1770F0DB004C5121 /* RightClickViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E6B899ACD1AC5ADEA2AC88A8 /* RightClickViewManager.m */; };
 		B2057D3E05712F229F28B85F /* HexViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA8F30E8324BE804D394321 /* HexViewManager.swift */; };
 		EAC9C37769E76D1645EE3328 /* MenuBarModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 55AD1D050BA2D0A0D9AAB689 /* MenuBarModule.m */; };
@@ -28,6 +30,7 @@
 		13B07F961A680F5B00A75B9A /* HexWorksMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HexWorksMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2470201DB57D5FA5F96EFFD4 /* HexWorksMac-macOS-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "HexWorksMac-macOS-Bridging-Header.h"; sourceTree = "<group>"; };
 		350B14A2173BC955AE84DA26 /* Pods-HexWorksMac-macOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HexWorksMac-macOS.release.xcconfig"; path = "Target Support Files/Pods-HexWorksMac-macOS/Pods-HexWorksMac-macOS.release.xcconfig"; sourceTree = "<group>"; };
+		43BABC2A4F2663CA32CC9865 /* StorageModule.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = StorageModule.h; sourceTree = "<group>"; };
 		514201492437B4B30078DB4F /* HexWorksMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HexWorksMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5142014B2437B4B30078DB4F /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		5142014C2437B4B30078DB4F /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
@@ -39,11 +42,13 @@
 		55AD1D050BA2D0A0D9AAB689 /* MenuBarModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = MenuBarModule.m; sourceTree = "<group>"; };
 		58A2DD3DE9E9C90987D516A2 /* MenuBarModule.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = MenuBarModule.h; sourceTree = "<group>"; };
 		66B1052D7E7E1F054C33A55F /* libPods-HexWorksMac-macOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-HexWorksMac-macOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B093881B8BE74117C4A0FF8 /* ToolbarManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ToolbarManager.swift; sourceTree = "<group>"; };
 		8FD396669A94E4CB638D5713 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9F2F209EC77D48878ECDBCF2 /* FileDialogModule.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = FileDialogModule.h; sourceTree = "<group>"; };
 		B380ABE2705E2749CC1C9279 /* RightClickView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RightClickView.swift; sourceTree = "<group>"; };
 		C7616A35C1C2D975902499ED /* FileDialogModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = FileDialogModule.m; sourceTree = "<group>"; };
 		D65428479A83565F1D4C4C12 /* Pods-HexWorksMac-macOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HexWorksMac-macOS.debug.xcconfig"; path = "Target Support Files/Pods-HexWorksMac-macOS/Pods-HexWorksMac-macOS.debug.xcconfig"; sourceTree = "<group>"; };
+		E12A12ACE374CC179E137F62 /* StorageModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = StorageModule.m; sourceTree = "<group>"; };
 		E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = HexViewManager.m; sourceTree = "<group>"; };
 		E31BBA5A4874F3E7401035E7 /* HexViewNative.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HexViewNative.swift; sourceTree = "<group>"; };
 		E6B899ACD1AC5ADEA2AC88A8 /* RightClickViewManager.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = RightClickViewManager.m; sourceTree = "<group>"; };
@@ -108,6 +113,9 @@
 				E142B4ED903CAB9AABF2B4E8 /* HexViewManager.m */,
 				B380ABE2705E2749CC1C9279 /* RightClickView.swift */,
 				E6B899ACD1AC5ADEA2AC88A8 /* RightClickViewManager.m */,
+				7B093881B8BE74117C4A0FF8 /* ToolbarManager.swift */,
+				43BABC2A4F2663CA32CC9865 /* StorageModule.h */,
+				E12A12ACE374CC179E137F62 /* StorageModule.m */,
 			);
 			path = "HexWorksMac-macOS";
 			sourceTree = "<group>";
@@ -364,6 +372,8 @@
 				95C8866C8C363F4A23ED2E51 /* HexViewManager.m in Sources */,
 				456574786F4258FFA6DEAD7D /* RightClickView.swift in Sources */,
 				9CF9E10C1770F0DB004C5121 /* RightClickViewManager.m in Sources */,
+				9CB4A6EB78CBFF1C0AC0E387 /* ToolbarManager.swift in Sources */,
+				5BE963B46A7B08A5A757E9C2 /* StorageModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

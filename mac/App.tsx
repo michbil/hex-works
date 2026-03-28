@@ -11,6 +11,7 @@ import { ColorPicker } from './src/components/color-picker';
 import { HeatmapPanel } from './src/components/heatmap-panel';
 import { useMenuBar } from './src/hooks/use-menu-bar';
 import { useFileHandler } from './src/hooks/use-file-handler';
+import { usePersistence } from './src/hooks/use-persistence';
 
 const { FileDialogModule } = NativeModules;
 
@@ -85,9 +86,11 @@ function HexEditorApp() {
 
   const buffer = useHexEditorStore(s => s.buffer);
   const fileName = useHexEditorStore(s => s.fileName);
-
   // Set up native menu bar
   useMenuBar({ setRightTab });
+
+  // Persist session (open tabs / file paths / bookmarks)
+  usePersistence();
 
   // Update window title when tab changes
   React.useEffect(() => {

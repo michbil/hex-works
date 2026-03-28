@@ -22,6 +22,10 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+// Module-level singletons — shared across all useFileHandler() calls
+export const filePaths = new Map<string, string>();
+export const bookmarks = new Map<string, string>();
+
 export function useFileHandler() {
   const addTab = useHexEditorStore(s => s.addTab);
   const buffer = useHexEditorStore(s => s.buffer);
@@ -30,8 +34,6 @@ export function useFileHandler() {
   const activeTabIndex = useHexEditorStore(s => s.activeTabIndex);
   const tabs = useHexEditorStore(s => s.tabs);
 
-  // Track file paths for "Save" (not "Save As")
-  const filePathsRef = useRef<Map<string, string>>(new Map());
 
   const openFile = useCallback(async () => {
     try {
@@ -45,8 +47,12 @@ export function useFileHandler() {
         const bytes = base64ToUint8Array(file.data);
         const buf = new BinaryBuffer(bytes);
         buf.name = file.name;
+        // Set singletons BEFORE addTab (addTab triggers save via subscriber)
+        filePaths.set(buf.uuid, file.path);
+        if (file.bookmark) {
+          bookmarks.set(buf.uuid, file.bookmark);
+        }
         addTab(buf, file.name);
-        filePathsRef.current.set(buf.uuid, file.path);
       }
 
       const lastName = files[files.length - 1]?.name;
@@ -63,20 +69,18 @@ export function useFileHandler() {
     try {
       const base64Data = uint8ArrayToBase64(buffer.buffer);
       const tabId = tabs[activeTabIndex]?.id;
-      const existingPath = tabId ? filePathsRef.current.get(tabId) : undefined;
+      const existingPath = tabId ? filePaths.get(tabId) : undefined;
 
       if (existingPath) {
-        // Save to existing path
         await FileDialogModule.saveFileToPath(existingPath, base64Data);
       } else {
-        // Show Save As dialog
         const result = await FileDialogModule.saveFile(
           fileName || 'untitled.bin',
           base64Data,
         );
-        if (!result) return; // User cancelled
+        if (!result) return;
         if (tabId) {
-          filePathsRef.current.set(tabId, result.path);
+          filePaths.set(tabId, result.path);
         }
       }
       setModified(false);
@@ -96,7 +100,7 @@ export function useFileHandler() {
       if (!result) return;
       const tabId = tabs[activeTabIndex]?.id;
       if (tabId) {
-        filePathsRef.current.set(tabId, result.path);
+        filePaths.set(tabId, result.path);
       }
       setModified(false);
     } catch (err) {

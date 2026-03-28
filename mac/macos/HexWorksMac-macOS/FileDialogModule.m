@@ -32,11 +32,26 @@ RCT_EXPORT_METHOD(openFile:(RCTPromiseResolveBlock)resolve
         NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
         if (error) continue;
 
+        // Create security-scoped bookmark for persistent access
+        NSError *bookmarkError = nil;
+        NSData *bookmark = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+                          includingResourceValuesForKeys:nil
+                                         relativeToURL:nil
+                                                 error:&bookmarkError];
+        NSString *bookmarkBase64 = bookmark ? [bookmark base64EncodedStringWithOptions:0] : @"";
+        if (bookmarkError) {
+          NSLog(@"HexWorks: bookmark creation failed for %@: %@", url.path, bookmarkError);
+        }
+
+        NSString *filePath = url.path;
+        NSLog(@"HexWorks: opened file path=%@ bookmark=%lu bytes", filePath, (unsigned long)bookmark.length);
+
         [files addObject:@{
           @"name": url.lastPathComponent ?: @"",
-          @"path": url.path ?: @"",
+          @"path": filePath ?: @"",
           @"data": [data base64EncodedStringWithOptions:0] ?: @"",
           @"size": @(data.length),
+          @"bookmark": bookmarkBase64,
         }];
       }
 
@@ -219,6 +234,74 @@ RCT_EXPORT_METHOD(pasteFromClipboard:(RCTPromiseResolveBlock)resolve
     NSString *text = [pb stringForType:NSPasteboardTypeString];
     resolve(text ?: @"");
   });
+}
+
+// Read file from bookmark (security-scoped) or path
+RCT_EXPORT_METHOD(readFileFromBookmark:(NSString *)bookmarkBase64
+                  fallbackPath:(NSString *)filePath
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  NSURL *url = nil;
+  BOOL isStale = NO;
+
+  // Try security-scoped bookmark first
+  if (bookmarkBase64.length > 0) {
+    NSData *bookmarkData = [[NSData alloc] initWithBase64EncodedString:bookmarkBase64 options:0];
+    if (bookmarkData) {
+      NSError *bookmarkError = nil;
+      url = [NSURL URLByResolvingBookmarkData:bookmarkData
+                                      options:NSURLBookmarkResolutionWithSecurityScope
+                                relativeToURL:nil
+                          bookmarkDataIsStale:&isStale
+                                        error:&bookmarkError];
+      if (url) {
+        [url startAccessingSecurityScopedResource];
+      }
+    }
+  }
+
+  // Fallback to direct path
+  if (!url) {
+    url = [NSURL fileURLWithPath:filePath];
+  }
+
+  NSError *error = nil;
+  NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
+
+  if (error || !data) {
+    if (url && bookmarkBase64.length > 0) {
+      [url stopAccessingSecurityScopedResource];
+    }
+    reject(@"READ_ERROR", error ? error.localizedDescription : @"File not found", error);
+    return;
+  }
+
+  // Create fresh bookmark if stale
+  NSString *newBookmark = @"";
+  if (isStale || bookmarkBase64.length == 0) {
+    NSData *bookmark = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+                      includingResourceValuesForKeys:nil
+                                     relativeToURL:nil
+                                             error:nil];
+    if (bookmark) {
+      newBookmark = [bookmark base64EncodedStringWithOptions:0];
+    }
+  }
+
+  NSDictionary *result = @{
+    @"name": url.lastPathComponent ?: @"",
+    @"path": url.path ?: filePath,
+    @"data": [data base64EncodedStringWithOptions:0] ?: @"",
+    @"size": @(data.length),
+    @"bookmark": newBookmark.length > 0 ? newBookmark : (bookmarkBase64 ?: @""),
+  };
+
+  if (bookmarkBase64.length > 0) {
+    [url stopAccessingSecurityScopedResource];
+  }
+
+  resolve(result);
 }
 
 @end

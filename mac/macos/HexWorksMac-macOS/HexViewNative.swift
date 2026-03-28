@@ -99,12 +99,15 @@ class HexViewNative: RCTView {
   private var hexCharWidth: CGFloat { 3 }
   private var gap: CGFloat { charWidth * 2 }
 
+  private let padX: CGFloat = 8
+  private let padY: CGFloat = 4
+
   private var asciiStartX: CGFloat {
     addressWidth + charWidth * CGFloat(bytesPerLine) * hexCharWidth + gap
   }
 
   private var visibleRows: Int {
-    max(1, Int(floor(canvas.bounds.height / lineHeight)))
+    max(1, Int(floor((canvas.bounds.height - padY) / lineHeight)))
   }
 
   private var totalLines: Int {
@@ -233,6 +236,11 @@ class HexViewNative: RCTView {
     NSRect(x: 0, y: 0, width: width, height: height).fill()
 
     guard bufferData.count > 0, bytesPerLine > 0 else { return }
+
+    // Apply padding via graphics context translation
+    guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+    ctx.saveGState()
+    ctx.translateBy(x: padX, y: padY)
 
     // Use local drag state for immediate feedback, fall back to React props
     let selMin: Int
@@ -367,7 +375,10 @@ class HexViewNative: RCTView {
       }
     }
 
-    // Scrollbar
+    // Restore padding translation before drawing scrollbar
+    ctx.restoreGState()
+
+    // Scrollbar (drawn at absolute position)
     if totalLines > visibleRows {
       let scrollbarWidth: CGFloat = 10
       let scrollbarX = width - scrollbarWidth
@@ -445,11 +456,13 @@ class HexViewNative: RCTView {
   private func hitTestByte(point: NSPoint) -> (index: Int, isAscii: Bool)? {
     let cw = charWidth
     let lh = lineHeight
-    let row = Int(floor(point.y / lh))
+    // Adjust for padding
+    let x = point.x - padX
+    let y = point.y - padY
+    let row = Int(floor(y / lh))
     let lineIndex = startLine + row
     guard lineIndex >= 0, lineIndex < totalLines else { return nil }
     let lineOffset = lineIndex * bytesPerLine
-    let x = point.x
 
     if x >= asciiStartX {
       let col = Int(floor((x - asciiStartX) / cw))
