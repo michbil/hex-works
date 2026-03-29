@@ -33,7 +33,6 @@ RCT_EXPORT_METHOD(setupMenuBar)
 {
   dispatch_async(dispatch_get_main_queue(), ^{
     [self createMenuBar];
-    [ToolbarManager.shared setupToolbar];
   });
 }
 
